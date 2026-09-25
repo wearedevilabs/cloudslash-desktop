@@ -618,14 +618,29 @@ Three features (remediation plans, the executive HTML dashboard and the analysis
 
 The desktop app uses CGO, so its binary must be built on the platform it runs on. Cross-compiling is not supported, and macOS builds require a Mac.
 
-`.github/workflows/release.yml` handles this: it builds the CLI and the desktop app on native Linux, Windows and macOS runners (macOS produces a universal arm64 + x86_64 binary), writes `SHA256SUMS`, and attaches everything to a GitHub release.
+`.github/workflows/release.yml` handles this. Pushing to `main` updates a rolling `latest` prerelease; pushing a version tag cuts a proper release:
 
 ```bash
-git tag v2.2.6
-git push origin v2.2.6
+git tag v2.2.7
+git push origin v2.2.7
 ```
 
-Running the workflow manually builds the artifacts without creating a release. Locally, `make desktop` builds for whatever machine you are on.
+Every download is an archive, because a bare executable loses its permission bit in a browser download:
+
+| platform | artifact |
+| --- | --- |
+| macOS | `cloudslash-desktop_darwin_universal.app.zip` (arm64 + x86_64 `.app` bundle) |
+| Linux | `cloudslash-desktop_linux_amd64.tar.gz` |
+| Windows | `cloudslash-desktop_windows_amd64.zip` |
+| CLI | `cloudslash_<os>_<arch>.tar.gz` / `.zip` |
+
+The macOS build is only ad-hoc signed, so the first launch needs either right-click → **Open**, or:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/CloudSlash.app
+```
+
+Locally, `make desktop` builds for whatever machine you are on.
 
 ---
 

@@ -2,12 +2,17 @@ name: Release
 
 # Releases build themselves.
 #
-#   push to main        -> builds everything, publishes/updates the "latest" release
+#   push to main        -> builds everything, updates the "latest" prerelease
 #   push a v* tag       -> builds everything, publishes a release for that tag
 #   manual run          -> same as a push to main
 #
-# The desktop app uses CGO, so it is built on native runners (it cannot be
-# cross-compiled). macOS gets a universal arm64 + x86_64 binary.
+# Everything is published as an archive (.tar.gz / .zip). A bare Mach-O or ELF
+# file loses its executable bit in a browser download, and macOS will then open
+# it as a document instead of running it. Archives keep the bit, and the macOS
+# build ships as a real .app bundle.
+#
+# The desktop app uses CGO, so it is built on native runners; it cannot be
+# cross-compiled. macOS gets a universal arm64 + x86_64 binary.
 
 on:
   push:
@@ -26,8 +31,20 @@ concurrency:
 
 jobs:
   cli:
-    name: cli
+    name: cli ${{ matrix.goos }}/${{ matrix.goarch }}
     runs-on: ubuntu-latest
+    strategy:
+      # One runner per target: Go's build cache is per platform, so building
+      # them in sequence means compiling the whole dependency tree five times.
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: linux, goarch: amd64 }
+          - { goos: linux, goarch: arm64 }
+          - { goos: darwin, goarch: amd64 }
+          - { goos: darwin, goarch: arm64 }
+          - { goos: windows, goarch: amd64 }
+
     steps:
       - uses: actions/checkout@v4
 
@@ -36,7 +53,7 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Build
+      - name: Build and package
         run: |
           set -euo pipefail
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
@@ -45,22 +62,30 @@ jobs:
             version="$(cat VERSION)"
           fi
           echo "version: ${version}"
+
           mkdir -p dist
-          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
-            os="${target%/*}"
-            arch="${target#*/}"
-            ext=""
-            [ "${os}" = "windows" ] && ext=".exe"
-            echo "  building ${os}/${arch}"
-            CGO_ENABLED=0 GOOS="${os}" GOARCH="${arch}" \
-              go build -trimpath \
-                -ldflags "-s -w -X github.com/DrSkyle/cloudslash/v2/pkg/version.Current=${version}" \
-                -o "dist/cloudslash_${os}_${arch}${ext}" ./cmd/cloudslash-cli
-          done
+          name="cloudslash_${{ matrix.goos }}_${{ matrix.goarch }}"
+          ext=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            ext=".exe"
+          fi
+
+          CGO_ENABLED=0 GOOS="${{ matrix.goos }}" GOARCH="${{ matrix.goarch }}" \
+            go build -trimpath \
+              -ldflags "-s -w -X github.com/DrSkyle/cloudslash/v2/pkg/version.Current=${version}" \
+              -o "dist/${name}${ext}" ./cmd/cloudslash-cli
+
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            (cd dist && zip -q "${name}.zip" "${name}${ext}")
+          else
+            tar -czf "dist/${name}.tar.gz" -C dist "${name}${ext}"
+          fi
+          rm -f "dist/${name}${ext}"
+          ls -lh dist
 
       - uses: actions/upload-artifact@v4
         with:
-          name: cli
+          name: cli-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/*
           if-no-files-found: error
 
@@ -73,22 +98,13 @@ jobs:
         include:
           - name: linux-amd64
             os: ubuntu-latest
-            goos: linux
-            goarch: amd64
-            ext: ""
-            gui_ldflags: ""
+            kind: linux
           - name: windows-amd64
             os: windows-latest
-            goos: windows
-            goarch: amd64
-            ext: ".exe"
-            gui_ldflags: "-H=windowsgui"
+            kind: windows
           - name: darwin-universal
             os: macos-latest
-            goos: darwin
-            goarch: arm64
-            ext: ""
-            gui_ldflags: ""
+            kind: macos
 
     steps:
       - uses: actions/checkout@v4
@@ -109,35 +125,79 @@ jobs:
         shell: bash
         run: echo "C:/msys64/mingw64/bin" >> "$GITHUB_PATH"
 
-      - name: Build desktop
-        if: runner.os != 'macOS'
+      - name: Build and package (Linux)
+        if: matrix.kind == 'linux'
         shell: bash
         env:
           CGO_ENABLED: "1"
         run: |
           set -euo pipefail
           mkdir -p dist
-          go build -trimpath -ldflags "-s -w ${{ matrix.gui_ldflags }}" \
-            -o "dist/cloudslash-desktop_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.ext }}" \
-            ./cmd/cloudslash-desktop
+          go build -trimpath -ldflags "-s -w" \
+            -o dist/cloudslash-desktop ./cmd/cloudslash-desktop
+          tar -czf dist/cloudslash-desktop_linux_amd64.tar.gz -C dist cloudslash-desktop
+          rm -f dist/cloudslash-desktop
+          ls -lh dist
 
-      - name: Build desktop (universal)
-        if: runner.os == 'macOS'
+      - name: Build and package (Windows)
+        if: matrix.kind == 'windows'
+        shell: bash
+        env:
+          CGO_ENABLED: "1"
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          go build -trimpath -ldflags "-s -w -H=windowsgui" \
+            -o dist/cloudslash-desktop.exe ./cmd/cloudslash-desktop
+          (cd dist && zip -q cloudslash-desktop_windows_amd64.zip cloudslash-desktop.exe)
+          rm -f dist/cloudslash-desktop.exe
+          ls -lh dist
+
+      - name: Build and package (macOS .app)
+        if: matrix.kind == 'macos'
         shell: bash
         run: |
           set -euo pipefail
+          version="$(cat VERSION)"
           mkdir -p dist
           GOARCH=arm64 CGO_ENABLED=1 go build -trimpath -ldflags "-s -w" \
             -o dist/.desktop-arm64 ./cmd/cloudslash-desktop
           GOARCH=amd64 CGO_ENABLED=1 CC="clang -arch x86_64" go build -trimpath -ldflags "-s -w" \
             -o dist/.desktop-amd64 ./cmd/cloudslash-desktop
-          lipo -create -output dist/cloudslash-desktop_darwin_universal \
-            dist/.desktop-arm64 dist/.desktop-amd64
+          lipo -create -output dist/.desktop-universal dist/.desktop-arm64 dist/.desktop-amd64
           rm -f dist/.desktop-arm64 dist/.desktop-amd64
+
+          app="dist/CloudSlash.app"
+          mkdir -p "${app}/Contents/MacOS" "${app}/Contents/Resources"
+          mv dist/.desktop-universal "${app}/Contents/MacOS/cloudslash-desktop"
+          chmod +x "${app}/Contents/MacOS/cloudslash-desktop"
+
+          cat > "${app}/Contents/Info.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleName</key><string>CloudSlash</string>
+            <key>CFBundleDisplayName</key><string>CloudSlash</string>
+            <key>CFBundleExecutable</key><string>cloudslash-desktop</string>
+            <key>CFBundleIdentifier</key><string>io.cloudslash.desktop</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleShortVersionString</key><string>${version}</string>
+            <key>CFBundleVersion</key><string>${version}</string>
+            <key>LSMinimumSystemVersion</key><string>11.0</string>
+            <key>NSHighResolutionCapable</key><true/>
+          </dict>
+          </plist>
+          PLIST
+
+          codesign --force --deep --sign - "${app}" 2>/dev/null || echo "ad-hoc signing skipped"
+          (cd dist && zip -qry cloudslash-desktop_darwin_universal.app.zip CloudSlash.app)
+          rm -rf "${app}"
+          ls -lh dist
 
       - uses: actions/upload-artifact@v4
         with:
-          name: desktop-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: desktop-${{ matrix.kind }}
           path: dist/*
           if-no-files-found: error
 
@@ -146,7 +206,7 @@ jobs:
     needs: [cli, desktop]
     runs-on: ubuntu-latest
     steps:
-      # gh needs a checkout (or GH_REPO) to know which repo it is operating on.
+      # gh needs a checkout (or GH_REPO) to know which repo it operates on.
       - uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v4

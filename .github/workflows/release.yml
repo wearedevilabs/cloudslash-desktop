@@ -289,5 +289,15 @@ jobs:
                 --target "$GITHUB_SHA" --notes "$notes"
             fi
           fi
+
+          # Drop assets that are no longer produced by this build, so nobody
+          # can download a stale (or non-runnable) binary from an older run.
+          for asset in $(gh release view "$tag" --json assets --jq '.assets[].name'); do
+            if [ ! -e "dist/${asset}" ]; then
+              echo "removing stale asset: ${asset}"
+              gh release delete-asset "$tag" "$asset" --yes
+            fi
+          done
+
           gh release upload "$tag" dist/* --clobber
           echo "published: $(gh release view "$tag" --json url --jq .url)"

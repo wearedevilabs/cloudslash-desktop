@@ -1,13 +1,15 @@
 name: Release
 
-# Builds the CLI and the Fyne desktop app for every supported platform and
-# attaches the binaries to a GitHub release.
+# Cutting a release:
+#   git tag v2.2.7 && git push origin v2.2.7
 #
-# The desktop app uses CGO, so each target is compiled on a native runner.
-# Cross-compiling the desktop app (especially to macOS) is not supported.
+# On a v* tag this workflow:
+#   1. verifies the tree (gofmt, vet, tests)
+#   2. publishes the CLI archives + checksums with GoReleaser
+#   3. builds the desktop app on native runners and attaches it to that release
 #
-# Trigger: push a version tag, e.g.  git tag v2.2.6 && git push origin v2.2.6
-# A manual run builds the artifacts only and does not create a release.
+# Running it manually (Actions -> Release -> Run workflow) only builds the
+# desktop artifacts and does not touch any release.
 
 on:
   push:
@@ -52,9 +54,32 @@ jobs:
         run: go vet ./...
 
       - name: Tests
-        # The package tests are hermetic. Integration tests that need AWS or
-        # Docker are skipped automatically when those are unavailable.
+        # Hermetic package tests. Integration tests that need AWS or Docker
+        # skip themselves when those are unavailable.
         run: go test ./pkg/...
+
+  cli-release:
+    name: goreleaser
+    needs: verify
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   desktop:
     name: desktop ${{ matrix.name }}
@@ -102,25 +127,11 @@ jobs:
         shell: bash
         run: echo "C:/msys64/mingw64/bin" >> "$GITHUB_PATH"
 
-      - name: Build CLI
-        shell: bash
-        env:
-          CGO_ENABLED: "0"
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          mkdir -p dist
-          go build -trimpath -ldflags "-s -w" \
-            -o "dist/cloudslash_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.ext }}" \
-            ./cmd/cloudslash-cli
-
       - name: Build desktop
         if: runner.os != 'macOS'
         shell: bash
         env:
           CGO_ENABLED: "1"
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
         run: |
           mkdir -p dist
           go build -trimpath -ldflags "-s -w ${{ matrix.gui_ldflags }}" \
@@ -139,42 +150,37 @@ jobs:
           lipo -create -output dist/cloudslash-desktop_darwin_universal \
             dist/.desktop-arm64 dist/.desktop-amd64
           rm -f dist/.desktop-arm64 dist/.desktop-amd64
-          file dist/cloudslash-desktop_darwin_universal
 
       - name: Checksums
         shell: bash
         run: |
           cd dist
           if command -v sha256sum >/dev/null 2>&1; then
-            sha256sum * > SHA256SUMS
+            sha256sum cloudslash-desktop_* > "SHA256SUMS-desktop-${{ matrix.goos }}-${{ matrix.goarch }}"
           else
-            shasum -a 256 * > SHA256SUMS
+            shasum -a 256 cloudslash-desktop_* > "SHA256SUMS-desktop-${{ matrix.goos }}-${{ matrix.goarch }}"
           fi
-          cat SHA256SUMS
 
       - uses: actions/upload-artifact@v4
         with:
-          name: cloudslash-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: desktop-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/*
           if-no-files-found: error
 
-  release:
-    name: publish release
-    needs: desktop
+  attach-desktop:
+    name: attach desktop builds
+    needs: [cli-release, desktop]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
 
-      - name: Publish
+      - name: Upload to the release GoReleaser created
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
-            || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes
+          ls -lh dist
           gh release upload "$GITHUB_REF_NAME" dist/* --clobber

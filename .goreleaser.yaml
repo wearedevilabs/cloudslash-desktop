@@ -1,0 +1,44 @@
+# GoReleaser configuration for the CloudSlash CLI.
+#
+# Runs from .github/workflows/release.yml when a v* tag is pushed.
+#
+# The Fyne desktop app is deliberately not built here: it uses CGO and has to be
+# compiled on each target OS. The release workflow attaches those binaries
+# separately, built on native runners.
+version: 2
+
+project_name: cloudslash
+
+builds:
+  - id: cloudslash
+    main: ./cmd/cloudslash-cli
+    binary: cloudslash
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X github.com/DrSkyle/cloudslash/v2/pkg/version.Current={{ .Version }}
+
+archives:
+  - formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ title .Os }}_{{ if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"

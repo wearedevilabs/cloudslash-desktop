@@ -6,13 +6,13 @@ name: Release
 #   push a v* tag       -> builds everything, publishes a release for that tag
 #   manual run          -> same as a push to main
 #
-# Everything is published as an archive (.tar.gz / .zip). A bare Mach-O or ELF
-# file loses its executable bit in a browser download, and macOS will then open
-# it as a document instead of running it. Archives keep the bit, and the macOS
-# build ships as a real .app bundle.
+# Every download is an archive. A bare Mach-O or ELF file loses its executable
+# bit in a browser download, and macOS will then open it as a document instead
+# of running it.
 #
 # The desktop app uses CGO, so it is built on native runners; it cannot be
-# cross-compiled. macOS gets a universal arm64 + x86_64 binary.
+# cross-compiled. As part of the Linux build the GUI is launched under Xvfb, so
+# a release cannot be published with a desktop binary that fails to start.
 
 on:
   push:
@@ -46,9 +46,9 @@ jobs:
           - { goos: windows, goarch: amd64 }
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
@@ -76,14 +76,15 @@ jobs:
               -o "dist/${name}${ext}" ./cmd/cloudslash-cli
 
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            (cd dist && zip -q "${name}.zip" "${name}${ext}")
+            # Git Bash has no zip on the Windows runners; use PowerShell's.
+            pwsh -Command "Compress-Archive -Path 'dist/${name}${ext}' -DestinationPath 'dist/${name}.zip'"
           else
             tar -czf "dist/${name}.tar.gz" -C dist "${name}${ext}"
           fi
           rm -f "dist/${name}${ext}"
           ls -lh dist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: cli-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/*
@@ -107,9 +108,9 @@ jobs:
             kind: macos
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
@@ -118,16 +119,16 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev xorg-dev
+          sudo apt-get install -y libgl1-mesa-dev xorg-dev xvfb libgl1-mesa-dri
 
       - name: Put mingw on PATH
         if: runner.os == 'Windows'
         shell: bash
         run: echo "C:/msys64/mingw64/bin" >> "$GITHUB_PATH"
 
-      - name: Build and package (Linux)
+      # ---------------------------------------------------------------- linux
+      - name: Build (Linux)
         if: matrix.kind == 'linux'
-        shell: bash
         env:
           CGO_ENABLED: "1"
         run: |
@@ -135,11 +136,40 @@ jobs:
           mkdir -p dist
           go build -trimpath -ldflags "-s -w" \
             -o dist/cloudslash-desktop ./cmd/cloudslash-desktop
+
+      - name: Smoke test the GUI (Linux)
+        if: matrix.kind == 'linux'
+        run: |
+          set -euo pipefail
+          Xvfb :99 -screen 0 1280x800x24 &
+          xvfb_pid=$!
+          sleep 3
+          DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 ./dist/cloudslash-desktop >/tmp/gui.log 2>&1 &
+          app_pid=$!
+          sleep 20
+          if kill -0 "$app_pid" 2>/dev/null; then
+            echo "GUI started and stayed up"
+            kill "$app_pid" || true
+          else
+            echo "GUI exited during startup:"
+            cat /tmp/gui.log
+            kill "$xvfb_pid" || true
+            exit 1
+          fi
+          echo "--- app log ---"
+          cat /tmp/gui.log || true
+          kill "$xvfb_pid" || true
+
+      - name: Package (Linux)
+        if: matrix.kind == 'linux'
+        run: |
+          set -euo pipefail
           tar -czf dist/cloudslash-desktop_linux_amd64.tar.gz -C dist cloudslash-desktop
           rm -f dist/cloudslash-desktop
           ls -lh dist
 
-      - name: Build and package (Windows)
+      # -------------------------------------------------------------- windows
+      - name: Build (Windows)
         if: matrix.kind == 'windows'
         shell: bash
         env:
@@ -149,11 +179,18 @@ jobs:
           mkdir -p dist
           go build -trimpath -ldflags "-s -w -H=windowsgui" \
             -o dist/cloudslash-desktop.exe ./cmd/cloudslash-desktop
-          (cd dist && zip -q cloudslash-desktop_windows_amd64.zip cloudslash-desktop.exe)
-          rm -f dist/cloudslash-desktop.exe
-          ls -lh dist
 
-      - name: Build and package (macOS .app)
+      - name: Package (Windows)
+        if: matrix.kind == 'windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist/cloudslash-desktop.exe `
+            -DestinationPath dist/cloudslash-desktop_windows_amd64.zip
+          Remove-Item dist/cloudslash-desktop.exe
+          Get-ChildItem dist
+
+      # ---------------------------------------------------------------- macOS
+      - name: Build and package (macOS)
         if: matrix.kind == 'macos'
         shell: bash
         run: |
@@ -190,12 +227,18 @@ jobs:
           </plist>
           PLIST
 
-          codesign --force --deep --sign - "${app}" 2>/dev/null || echo "ad-hoc signing skipped"
+          echo "--- bundle checks ---"
+          plutil -lint "${app}/Contents/Info.plist"
+          file "${app}/Contents/MacOS/cloudslash-desktop"
+          file "${app}/Contents/MacOS/cloudslash-desktop" | grep -q "universal binary"
+          codesign --force --deep --sign - "${app}"
+          codesign --verify --verbose "${app}"
+
           (cd dist && zip -qry cloudslash-desktop_darwin_universal.app.zip CloudSlash.app)
           rm -rf "${app}"
           ls -lh dist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: desktop-${{ matrix.kind }}
           path: dist/*
@@ -207,9 +250,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # gh needs a checkout (or GH_REPO) to know which repo it operates on.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true

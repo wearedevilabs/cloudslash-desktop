@@ -1,0 +1,82 @@
+package tui
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/DrSkyle/cloudslash/v2/pkg/version"
+	"github.com/charmbracelet/lipgloss"
+)
+
+func (m Model) viewHUD() string {
+	// Status Indicator.
+	status := "IDLE"
+	statusColor := subtle
+	if m.scanning {
+		status = "SCANNING"
+		statusColor = special
+	}
+
+	// Animate dots if scanning
+	if m.scanning {
+		dots := strings.Repeat(".", m.tickCount%4)
+		status = fmt.Sprintf("SCANNING%s", dots)
+	}
+
+	// Waste Ticker.
+	savings := fmt.Sprintf("$%.2f/mo", m.totalSavings)
+	if m.totalSavings > 0 {
+		savings += fmt.Sprintf(" ($%.0f/yr)", m.totalSavings*12)
+	}
+
+	// Aggregate Risk Assessment.
+	riskLevel := "LOW"
+	riskColor := subtle
+	if m.totalSavings > 100 {
+		riskLevel = "MODERATE"
+		riskColor = warning
+	}
+	if m.totalSavings > 1000 {
+		riskLevel = "CRITICAL"
+		riskColor = danger
+	}
+
+	// Assemble HUD Segments: [TITLE] [STATUS] [WASTE] [RISK]
+
+	// Top Status Bar
+	m.Graph.Mu.RLock()
+	nodeCount := len(m.Graph.GetNodes())
+	m.Graph.Mu.RUnlock()
+	segTitle := highlight.Render(fmt.Sprintf(" %s %s [%s] | %s | %d Resources Scanned", version.AppName, version.Current, version.License, m.Region, nodeCount))
+	// Status Segment (Progress Bar or Static Status)
+	var segStatus string
+	if m.scanning {
+
+		segStatus = lipgloss.JoinHorizontal(lipgloss.Center,
+			statusColor.Render("Scanning... "),
+			m.progress.View(),
+		)
+	} else {
+		segStatus = statusColor.Render(fmt.Sprintf("[ STATUS: %-10s ]", status))
+	}
+	segWaste := hudLabelStyle.Render("WASTE:") + hudValueStyle.Render(savings)
+	segRisk := hudLabelStyle.Render("RISK:") + riskColor.Render(riskLevel)
+
+	// Spacer
+	width := m.width - 4 // border padding
+	if width < 0 {
+		width = 0
+	}
+
+	// Using lipgloss for layout
+	left := lipgloss.JoinHorizontal(lipgloss.Center, segTitle, "  ", segStatus)
+	right := lipgloss.JoinHorizontal(lipgloss.Center, segWaste, "  |  ", segRisk)
+
+	content := lipgloss.JoinHorizontal(lipgloss.Top,
+		left,
+		lipgloss.NewStyle().Width(width-lipgloss.Width(left)-lipgloss.Width(right)).Render(""), // Spacer
+		right,
+	)
+
+	return hudStyle.Width(m.width - 2).Render(content)
+}

@@ -1,0 +1,151 @@
+package report
+
+import (
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/DrSkyle/cloudslash/v2/pkg/graph"
+	"github.com/DrSkyle/cloudslash/v2/pkg/version"
+)
+
+// GenerateExecutiveSummary generates the markdown executive summary.
+func GenerateExecutiveSummary(g *graph.Graph, path string, scanID string, accountID string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	g.Mu.RLock()
+	defer g.Mu.RUnlock()
+
+	totalWasteCost := 0.0
+	totalWasteCount := 0
+	var catCompute, catStorage, catNetwork, catDatabase float64
+
+	// Cost categories.
+
+	// Aggregate statistics.
+	for _, node := range g.Store.GetAllNodes() {
+		if node.IsWaste {
+			totalWasteCount++
+			totalWasteCost += node.Cost
+
+			if isCompute(node.TypeStr()) {
+				catCompute += node.Cost
+			} else if isStorage(node.TypeStr()) {
+				catStorage += node.Cost
+			} else if isNetwork(node.TypeStr()) {
+				catNetwork += node.Cost
+			} else if isDatabase(node.TypeStr()) {
+				catDatabase += node.Cost
+			}
+		}
+	}
+
+	annualSavings := totalWasteCost * 12
+
+	// Generate report sections.
+	fmt.Fprintf(f, "# CloudSlash Strategic Infrastructure Audit\n\n")
+
+	fmt.Fprintf(f, "| **Scan Metadata** | |\n")
+	fmt.Fprintf(f, "| :--- | :--- |\n")
+	fmt.Fprintf(f, "| **Date** | %s |\n", time.Now().Format("Jan 02, 2006"))
+	fmt.Fprintf(f, "| **Account ID** | `%s` |\n", accountID)
+	fmt.Fprintf(f, "| **Scan Ref** | `%s` |\n\n", scanID)
+
+	// Executive Overview.
+	fmt.Fprintf(f, "## 1. Executive Overview\n\n")
+	fmt.Fprintf(f, "CloudSlash has completed a comprehensive analysis of the AWS infrastructure. The audit identified **%d unattached or idle resources** contributing to unnecessary operational overhead.\n\n", totalWasteCount)
+
+	fmt.Fprintf(f, "### Key Financial Findings\n")
+	fmt.Fprintf(f, "- **Monthly Burn Rate:** $%.2f / mo\n", totalWasteCost)
+	fmt.Fprintf(f, "- **projected Annual Savings:** $%.2f / yr\n\n", annualSavings)
+
+	fmt.Fprintf(f, "> ** Strategic Insight:** Immediate remediation of these resources will reduce the cloud billing baseline by approximately **$%.0f** annually without impacting active workloads.\n\n", annualSavings)
+
+	// Cost Inefficiency Breakdown.
+	fmt.Fprintf(f, "## 2. Cost Inefficiency Breakdown\n\n")
+	fmt.Fprintf(f, " inefficiency is distributed across the following core infrastructure vectors:\n\n")
+
+	fmt.Fprintf(f, "| Infrastructure Vector | Monthly Cost | Annual Impact | Optimization Focus |\n")
+	fmt.Fprintf(f, "| :--- | :--- | :--- | :--- |\n")
+	if catCompute > 0 {
+		fmt.Fprintf(f, "| **Compute** (EC2, Lambda) | $%.2f | $%.2f | Terminate idle instances |\n", catCompute, catCompute*12)
+	}
+	if catStorage > 0 {
+		fmt.Fprintf(f, "| **Storage** (EBS, S3) | $%.2f | $%.2f | Delete unattached volumes |\n", catStorage, catStorage*12)
+	}
+	if catNetwork > 0 {
+		fmt.Fprintf(f, "| **Network** (NAT, EIP) | $%.2f | $%.2f | Release unused IPs/Gateways |\n", catNetwork, catNetwork*12)
+	}
+	if catDatabase > 0 {
+		fmt.Fprintf(f, "| **Database** (RDS) | $%.2f | $%.2f | Snapshot and terminate |\n", catDatabase, catDatabase*12)
+	}
+	fmt.Fprintf(f, "\n")
+
+	// Remediation Strategy.
+	fmt.Fprintf(f, "## 3. Recommended Remediation Strategy\n\n")
+	fmt.Fprintf(f, "> [!CAUTION]\n")
+	fmt.Fprintf(f, "> **CRITICAL: VALIDATION REQUIRED.**\n")
+	fmt.Fprintf(f, "> These scripts execute **irreversible infrastructure changes**. Manual auditing of the generated code is mandatory before execution.\n\n")
+
+	fmt.Fprintf(f, "To realize these savings while maintaining operational stability, the following phased approach is recommended:\n\n")
+
+	fmt.Fprintf(f, "### Phase 1: State Reconciliation (Low Risk)\n")
+	fmt.Fprintf(f, "Execute the state fix script to decouple these resources from Terraform management, preventing state drift.\n")
+	fmt.Fprintf(f, "```bash\n")
+	fmt.Fprintf(f, "# REVIEW FIRST: cat cloudslash-out/fix_terraform.sh\n")
+	fmt.Fprintf(f, "bash cloudslash-out/fix_terraform.sh\n")
+	fmt.Fprintf(f, "```\n\n")
+
+	// Phase 2 instructions.
+	fmt.Fprintf(f, "### Phase 2: Remediation (The Lazarus Protocol)\n")
+	fmt.Fprintf(f, "The following script initiates the **Purgatory Protocol**:\n")
+	fmt.Fprintf(f, "1. Creates a **Tombstone** (State Preservation) for every resource.\n")
+	fmt.Fprintf(f, "2. Stops instances and detaches volumes (Soft Delete).\n")
+	fmt.Fprintf(f, "3. Tags resources with `CloudSlash:Status=Purgatory`.\n\n")
+
+	fmt.Fprintf(f, "```bash\n")
+	fmt.Fprintf(f, "# REVIEW FIRST: cat cloudslash-out/safe_cleanup.sh\n")
+	fmt.Fprintf(f, "bash cloudslash-out/safe_cleanup.sh\n")
+	fmt.Fprintf(f, "```\n\n")
+
+	fmt.Fprintf(f, "### Phase 3: Recovery (Undo)\n")
+	fmt.Fprintf(f, "If a valid resource was accidentally targeted, use the **Resurrection Script** to restore it immediately using its Tombstone.\n\n")
+
+	fmt.Fprintf(f, "```bash\n")
+	fmt.Fprintf(f, "# RESTORE: cat cloudslash-out/undo_cleanup.sh\n")
+	fmt.Fprintf(f, "bash cloudslash-out/undo_cleanup.sh\n")
+	fmt.Fprintf(f, "```\n\n")
+
+	fmt.Fprintf(f, "---\n")
+	fmt.Fprintf(f, "*Report generated by CloudSlash Audit Engine v%s.*\n", version.Current)
+
+	return nil
+}
+
+// Summary contains high-level analysis statistics.
+type Summary struct {
+	Region       string
+	TotalScanned int
+	TotalWaste   int
+	TotalSavings float64
+}
+
+func isCompute(t string) bool {
+	return t == "AWS::EC2::Instance" || t == "AWS::Lambda::Function"
+}
+
+func isStorage(t string) bool {
+	return t == "AWS::EC2::Volume" || t == "AWS::S3::Bucket" || t == "AWS::EC2::Snapshot"
+}
+
+func isNetwork(t string) bool {
+	return t == "AWS::EC2::NatGateway" || t == "AWS::EC2::EIP" || t == "AWS::EC2::NetworkInterface"
+}
+
+func isDatabase(t string) bool {
+	return t == "AWS::RDS::DBInstance"
+}

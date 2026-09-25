@@ -1,0 +1,103 @@
+package tui
+
+import (
+	"time"
+
+	"github.com/DrSkyle/cloudslash/v2/pkg/engine/swarm"
+	"github.com/DrSkyle/cloudslash/v2/pkg/graph"
+	"github.com/charmbracelet/bubbles/progress"
+	"github.com/charmbracelet/bubbles/spinner"
+	tea "github.com/charmbracelet/bubbletea"
+)
+
+type ViewState int
+
+const (
+	ViewStateList ViewState = iota
+	ViewStateDetail
+	ViewStateTopology
+	ViewStateHelp
+)
+
+type TopologyLine struct {
+	ID    string
+	Text  string
+	Level int
+	Node  *graph.Node
+}
+
+type Model struct {
+	// Core Engine Components.
+	spinner  spinner.Model
+	progress progress.Model
+	Engine   *swarm.Engine
+	Graph    *graph.Graph
+
+	// state
+	state    ViewState
+	scanning bool
+	quitting bool
+	err      error
+	width    int
+	height   int
+	isMock   bool
+	Region   string
+
+	// data
+	wasteItems    []*graph.Node
+	topologyLines []TopologyLine // Flattened hierarchy for rendering.
+	totalSavings  float64
+	riskScore     int
+	tasksDone     int
+	tfRepairReady bool
+
+	// metrics
+	startTime time.Time
+
+	// filters
+	SortMode   string
+	FilterMode string
+
+	// feedback
+	statusMsg  string
+	statusTime time.Time
+
+	// navigation
+	cursor         int // main list cursor
+	topologyCursor int // topology view cursor
+	detailsScroll  int
+
+	// animation
+	tickCount int
+}
+
+type tickMsg time.Time
+
+func NewModel(e *swarm.Engine, g *graph.Graph, isMock bool, region string) Model {
+	s := spinner.New()
+	s.Spinner = spinner.Points
+
+	// Initialize Gradient Progress Bar.
+	prog := progress.New(progress.WithGradient("#00FF99", "#00CCFF"))
+
+	return Model{
+		spinner:   s,
+		progress:  prog,
+		scanning:  !isMock,
+		isMock:    isMock,
+		Engine:    e,
+		Graph:     g,
+		state:     ViewStateList,
+		startTime: time.Now(),
+		Region:    region,
+	}
+}
+
+func (m Model) Init() tea.Cmd {
+	return tea.Batch(
+		spinner.Tick,
+		tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
+			return tickMsg(t)
+		}),
+	)
+}

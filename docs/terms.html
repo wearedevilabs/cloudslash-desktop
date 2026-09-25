@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service | CloudSlash</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800,500,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+        }
+
+        .legal-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 100px 20px;
+        }
+
+        h1 {
+            font-family: 'Cabinet Grotesk', sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        h2 {
+            font-family: 'Cabinet Grotesk', sans-serif;
+            font-size: 1.5rem;
+            margin-top: 40px;
+            color: #00FF99;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 10px;
+        }
+
+        .tldr {
+            background: rgba(0, 255, 153, 0.1);
+            border-left: 3px solid #00FF99;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #94A3B8;
+            font-style: italic;
+        }
+
+        .tldr strong {
+            color: #00FF99;
+            font-style: normal;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            margin-right: 10px;
+        }
+
+        .caps-lock {
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 0.05em;
+        }
+        
+        ul { margin-bottom: 20px; }
+        li { margin-bottom: 8px; color: #cbd5e1; }
+    </style>
+</head>
+
+<body>
+    <div class="glass-overlay"></div>
+
+    <header>
+        <div class="container nav-container">
+            <div class="logo">
+                <a href="index.html" style="text-decoration: none; color: inherit; font-weight: bold;">
+                    CLOUDSLASH
+                </a>
+            </div>
+            <nav>
+                <a href="index.html">Back to Home</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="legal-container">
+        <h1>Terms of Service</h1>
+        <p style="color: #94A3B8;">Last Updated: January 2026</p>
+
+        <p>By downloading, installing, or using CloudSlash ("the Software"), you agree to be bound by these terms. If you are entering into this agreement on behalf of a company, you represent that you have the authority to bind such entity.</p>
+
+        <h2>1. The "Destructive Tool" Disclaimer</h2>
+        <div class="tldr"><strong>TL;DR</strong> This tool deletes cloud resources. If you delete your production database, we are not responsible.</div>
+        <p>You acknowledge that CloudSlash is a tool designed for <strong>infrastructure modification and deletion</strong>. It interacts with your cloud provider APIs (AWS) and local Terraform state files.</p>
+        <p><strong>You are solely responsible for:</strong></p>
+        <ul>
+            <li>Verifying all resources before deletion.</li>
+            <li>maintaining up-to-date backups of your Terraform state files (`.tfstate`) and cloud data.</li>
+            <li>Ensuring you have the correct IAM permissions and are operating in the correct environment/region.</li>
+        </ul>
+        <p>The "Nuke" and "Remediation" features are powerful. CloudSlash is not liable for data loss, service downtime, or accidental deletion of resources resulting from the use or misuse of the Software.</p>
+
+        <h2>2. License (AGPLv3)</h2>
+        <div class="tldr"><strong>TL;DR</strong> CloudSlash is Open Source.</div>
+        
+        <p>Your use of CloudSlash is governed by the <strong>GNU Affero General Public License v3 (AGPLv3)</strong>.</p>
+        <ul>
+            <li><strong>Freedom:</strong> You are free to run, copy, distribute, study, change and improve the software.</li>
+            <li><strong>Copyleft:</strong> If you modify CloudSlash and make it available to others (e.g., as a SaaS service), you must share your source code under the same license.</li>
+        </ul>
+
+        <p><strong>Commercial Exemption:</strong><br>
+        If your organization requires a commercial license to bypass the AGPLv3 obligations (e.g., for proprietary embedding), please contact `drskyle8000@gmail.com` for an exemption agreement.</p>
+
+        <h2>3. Warranty Disclaimer</h2>
+        <div class="tldr"><strong>TL;DR</strong> The software is provided "as is."</div>
+        <p class="caps-lock">THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. WE DO NOT WARRANT THAT THE SOFTWARE WILL BE ERROR-FREE OR THAT IT WILL DELETE ONLY THE RESOURCES YOU INTEND TO DELETE.</p>
+
+        <h2>4. Limitation of Liability</h2>
+        <div class="tldr"><strong>TL;DR</strong> If you sue us, the most you can get is $0 (since the software is free).</div>
+        <p class="caps-lock">IN NO EVENT SHALL CLOUDSLASH, ITS AUTHORS, OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+
+    </div>
+</body>
+</html>

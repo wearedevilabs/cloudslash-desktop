@@ -1,0 +1,20 @@
+# Build output
+/bin/
+/dist/
+cloudslash-out/
+
+# Local release binaries (too large for git; ship them via GitHub Releases)
+/cloudslash-desktop
+
+# Local runtime state
+.cloudslash/
+.ignore.yaml
+
+# Verification scratch
+/.verify/
+
+# Editor and tooling state
+.commandcode/
+
+# OS noise
+.DS_Store

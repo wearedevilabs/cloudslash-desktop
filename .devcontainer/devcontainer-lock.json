@@ -1,0 +1,34 @@
+{
+  "features": {
+    "ghcr.io/cirolosapio/devcontainers-features/alpine-curl:0": {
+      "version": "0.0.2",
+      "resolved": "ghcr.io/cirolosapio/devcontainers-features/alpine-curl@sha256:7e1899932b8f0220e5a85933ce391b903241b65659f13e095e24e7264381254b",
+      "integrity": "sha256:7e1899932b8f0220e5a85933ce391b903241b65659f13e095e24e7264381254b"
+    },
+    "ghcr.io/cirolosapio/devcontainers-features/alpine-go:0": {
+      "version": "0.0.3",
+      "resolved": "ghcr.io/cirolosapio/devcontainers-features/alpine-go@sha256:294bc9f0459a099fe238d8a8d4037896ad241274c139995726fecd4eed070834",
+      "integrity": "sha256:294bc9f0459a099fe238d8a8d4037896ad241274c139995726fecd4eed070834"
+    },
+    "ghcr.io/cirolosapio/devcontainers-features/alpine-lazygit:0": {
+      "version": "0.0.2",
+      "resolved": "ghcr.io/cirolosapio/devcontainers-features/alpine-lazygit@sha256:897eaafd5d997ef3833d5c62ced46709f6fb5d6c3e6ce40875db05937513e9e4",
+      "integrity": "sha256:897eaafd5d997ef3833d5c62ced46709f6fb5d6c3e6ce40875db05937513e9e4"
+    },
+    "ghcr.io/cirolosapio/devcontainers-features/alpine-node:0": {
+      "version": "0.0.16",
+      "resolved": "ghcr.io/cirolosapio/devcontainers-features/alpine-node@sha256:7a781b905607b5e755d1bf8d1369eb9232908b44f2f040c33a375fb5cd2fd67f",
+      "integrity": "sha256:7a781b905607b5e755d1bf8d1369eb9232908b44f2f040c33a375fb5cd2fd67f"
+    },
+    "ghcr.io/cirolosapio/devcontainers-features/alpine-opencode:0": {
+      "version": "0.0.1",
+      "resolved": "ghcr.io/cirolosapio/devcontainers-features/alpine-opencode@sha256:7590d6b1599b23c7e5250c6e129eb67b0fa1fa260af82dfd62519404cfe3b98f",
+      "integrity": "sha256:7590d6b1599b23c7e5250c6e129eb67b0fa1fa260af82dfd62519404cfe3b98f"
+    },
+    "ghcr.io/cirolosapio/devcontainers-features/alpine-starship:0": {
+      "version": "0.0.3",
+      "resolved": "ghcr.io/cirolosapio/devcontainers-features/alpine-starship@sha256:d6873e7b6541cc11dcb96d666d2e20b0b804207d20863488d0f9c26cff308bf3",
+      "integrity": "sha256:d6873e7b6541cc11dcb96d666d2e20b0b804207d20863488d0f9c26cff308bf3"
+    }
+  }
+}

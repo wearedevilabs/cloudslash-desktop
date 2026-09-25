@@ -1,0 +1,180 @@
+name: Release
+
+# Builds the CLI and the Fyne desktop app for every supported platform and
+# attaches the binaries to a GitHub release.
+#
+# The desktop app uses CGO, so each target is compiled on a native runner.
+# Cross-compiling the desktop app (especially to macOS) is not supported.
+#
+# Trigger: push a version tag, e.g.  git tag v2.2.6 && git push origin v2.2.6
+# A manual run builds the artifacts only and does not create a release.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install desktop build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev xorg-dev
+
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l cmd pkg)"
+          if [ -n "$unformatted" ]; then
+            echo "These files are not gofmt'd:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: Tests
+        # The package tests are hermetic. Integration tests that need AWS or
+        # Docker are skipped automatically when those are unavailable.
+        run: go test ./pkg/...
+
+  desktop:
+    name: desktop ${{ matrix.name }}
+    needs: verify
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux/amd64
+            os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            ext: ""
+            gui_ldflags: ""
+          - name: windows/amd64
+            os: windows-latest
+            goos: windows
+            goarch: amd64
+            ext: ".exe"
+            gui_ldflags: "-H=windowsgui"
+          - name: darwin/universal
+            os: macos-latest
+            goos: darwin
+            goarch: arm64
+            ext: ""
+            gui_ldflags: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install desktop build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev xorg-dev
+
+      - name: Put mingw on PATH
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo "C:/msys64/mingw64/bin" >> "$GITHUB_PATH"
+
+      - name: Build CLI
+        shell: bash
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p dist
+          go build -trimpath -ldflags "-s -w" \
+            -o "dist/cloudslash_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.ext }}" \
+            ./cmd/cloudslash-cli
+
+      - name: Build desktop
+        if: runner.os != 'macOS'
+        shell: bash
+        env:
+          CGO_ENABLED: "1"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p dist
+          go build -trimpath -ldflags "-s -w ${{ matrix.gui_ldflags }}" \
+            -o "dist/cloudslash-desktop_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.ext }}" \
+            ./cmd/cloudslash-desktop
+
+      - name: Build desktop (universal)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          mkdir -p dist
+          GOARCH=arm64 CGO_ENABLED=1 go build -trimpath -ldflags "-s -w" \
+            -o dist/.desktop-arm64 ./cmd/cloudslash-desktop
+          GOARCH=amd64 CGO_ENABLED=1 CC="clang -arch x86_64" go build -trimpath -ldflags "-s -w" \
+            -o dist/.desktop-amd64 ./cmd/cloudslash-desktop
+          lipo -create -output dist/cloudslash-desktop_darwin_universal \
+            dist/.desktop-arm64 dist/.desktop-amd64
+          rm -f dist/.desktop-arm64 dist/.desktop-amd64
+          file dist/cloudslash-desktop_darwin_universal
+
+      - name: Checksums
+        shell: bash
+        run: |
+          cd dist
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum * > SHA256SUMS
+          else
+            shasum -a 256 * > SHA256SUMS
+          fi
+          cat SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cloudslash-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: publish release
+    needs: desktop
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" dist/* --clobber

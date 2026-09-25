@@ -1,15 +1,14 @@
 name: Release
 
-# Cutting a release:
+# Every release builds itself:
 #   git tag v2.2.7 && git push origin v2.2.7
 #
-# On a v* tag this workflow:
-#   1. verifies the tree (gofmt, vet, tests)
-#   2. publishes the CLI archives + checksums with GoReleaser
-#   3. builds the desktop app on native runners and attaches it to that release
+# That builds the CLI for linux/darwin/windows, builds the desktop app on
+# native runners (it uses CGO, so it cannot be cross-compiled), and attaches
+# everything to the GitHub release for that tag.
 #
-# Running it manually (Actions -> Release -> Run workflow) only builds the
-# desktop artifacts and does not touch any release.
+# Running it manually (Actions -> Release -> Run workflow) builds the artifacts
+# without publishing a release.
 
 on:
   push:
@@ -25,8 +24,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  verify:
-    name: verify
+  cli:
+    name: cli
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,72 +35,54 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install desktop build dependencies
+      - name: Build
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev xorg-dev
-
-      - name: gofmt
-        run: |
-          unformatted="$(gofmt -l cmd pkg)"
-          if [ -n "$unformatted" ]; then
-            echo "These files are not gofmt'd:"
-            echo "$unformatted"
-            exit 1
+          set -euo pipefail
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            version="${GITHUB_REF_NAME}"
+          else
+            version="$(cat VERSION)"
           fi
+          echo "version: ${version}"
+          mkdir -p dist
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
+            os="${target%/*}"
+            arch="${target#*/}"
+            ext=""
+            [ "${os}" = "windows" ] && ext=".exe"
+            echo "  building ${os}/${arch}"
+            CGO_ENABLED=0 GOOS="${os}" GOARCH="${arch}" \
+              go build -trimpath \
+                -ldflags "-s -w -X github.com/DrSkyle/cloudslash/v2/pkg/version.Current=${version}" \
+                -o "dist/cloudslash_${os}_${arch}${ext}" ./cmd/cloudslash-cli
+          done
 
-      - name: go vet
-        run: go vet ./...
-
-      - name: Tests
-        # Hermetic package tests. Integration tests that need AWS or Docker
-        # skip themselves when those are unavailable.
-        run: go test ./pkg/...
-
-  cli-release:
-    name: goreleaser
-    needs: verify
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+      - uses: actions/upload-artifact@v4
         with:
-          fetch-depth: 0
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - uses: goreleaser/goreleaser-action@v7
-        with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: cli
+          path: dist/*
+          if-no-files-found: error
 
   desktop:
     name: desktop ${{ matrix.name }}
-    needs: verify
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: linux/amd64
+          - name: linux-amd64
             os: ubuntu-latest
             goos: linux
             goarch: amd64
             ext: ""
             gui_ldflags: ""
-          - name: windows/amd64
+          - name: windows-amd64
             os: windows-latest
             goos: windows
             goarch: amd64
             ext: ".exe"
             gui_ldflags: "-H=windowsgui"
-          - name: darwin/universal
+          - name: darwin-universal
             os: macos-latest
             goos: darwin
             goarch: arm64
@@ -116,7 +97,7 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install desktop build dependencies
+      - name: Install build dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
@@ -133,6 +114,7 @@ jobs:
         env:
           CGO_ENABLED: "1"
         run: |
+          set -euo pipefail
           mkdir -p dist
           go build -trimpath -ldflags "-s -w ${{ matrix.gui_ldflags }}" \
             -o "dist/cloudslash-desktop_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.ext }}" \
@@ -142,6 +124,7 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p dist
           GOARCH=arm64 CGO_ENABLED=1 go build -trimpath -ldflags "-s -w" \
             -o dist/.desktop-arm64 ./cmd/cloudslash-desktop
@@ -151,26 +134,16 @@ jobs:
             dist/.desktop-arm64 dist/.desktop-amd64
           rm -f dist/.desktop-arm64 dist/.desktop-amd64
 
-      - name: Checksums
-        shell: bash
-        run: |
-          cd dist
-          if command -v sha256sum >/dev/null 2>&1; then
-            sha256sum cloudslash-desktop_* > "SHA256SUMS-desktop-${{ matrix.goos }}-${{ matrix.goarch }}"
-          else
-            shasum -a 256 cloudslash-desktop_* > "SHA256SUMS-desktop-${{ matrix.goos }}-${{ matrix.goarch }}"
-          fi
-
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/*
           if-no-files-found: error
 
-  attach-desktop:
-    name: attach desktop builds
-    needs: [cli-release, desktop]
-    if: startsWith(github.ref, 'refs/tags/v')
+  publish:
+    name: publish release
+    needs: [cli, desktop]
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -178,9 +151,18 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - name: Upload to the release GoReleaser created
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum cloudslash* > checksums.txt
+          cat checksums.txt
+
+      - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ls -lh dist
-          gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          gh release view "$tag" >/dev/null 2>&1 \
+            || gh release create "$tag" --title "$tag" --generate-notes
+          gh release upload "$tag" dist/* --clobber

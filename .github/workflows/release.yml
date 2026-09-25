@@ -1,17 +1,18 @@
 name: Release
 
-# Every release builds itself:
-#   git tag v2.2.7 && git push origin v2.2.7
+# Releases build themselves.
 #
-# That builds the CLI for linux/darwin/windows, builds the desktop app on
-# native runners (it uses CGO, so it cannot be cross-compiled), and attaches
-# everything to the GitHub release for that tag.
+#   push to main        -> builds everything, publishes/updates the "latest" release
+#   push a v* tag       -> builds everything, publishes a release for that tag
+#   manual run          -> same as a push to main
 #
-# Running it manually (Actions -> Release -> Run workflow) builds the artifacts
-# without publishing a release.
+# The desktop app uses CGO, so it is built on native runners (it cannot be
+# cross-compiled). macOS gets a universal arm64 + x86_64 binary.
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   workflow_dispatch:
@@ -143,7 +144,6 @@ jobs:
   publish:
     name: publish release
     needs: [cli, desktop]
-    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -162,7 +162,25 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          tag="${GITHUB_REF_NAME}"
-          gh release view "$tag" >/dev/null 2>&1 \
-            || gh release create "$tag" --title "$tag" --generate-notes
+          ls -lh dist
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            tag="${GITHUB_REF_NAME}"
+            if gh release view "$tag" >/dev/null 2>&1; then
+              gh release edit "$tag" --title "$tag"
+            else
+              gh release create "$tag" --title "$tag" --generate-notes
+            fi
+          else
+            # Rolling build for main: a prerelease so it never steals the
+            # "Latest" badge from a versioned tag.
+            tag="latest"
+            notes="Built from ${GITHUB_SHA:0:7} on $(date -u +%Y-%m-%d)."
+            if gh release view "$tag" >/dev/null 2>&1; then
+              gh release edit "$tag" --title "Latest build" --notes "$notes"
+            else
+              gh release create "$tag" --title "Latest build" --prerelease \
+                --target "$GITHUB_SHA" --notes "$notes"
+            fi
+          fi
           gh release upload "$tag" dist/* --clobber
+          echo "published: $(gh release view "$tag" --json url --jq .url)"

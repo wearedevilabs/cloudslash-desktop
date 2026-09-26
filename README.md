@@ -1,18 +1,16 @@
-# CloudSlash
+# CloudSlash Desktop
 
-![Version v2.2.6](https://img.shields.io/badge/version-v2.2.6-blue?style=flat-square) ![License AGPLv3](https://img.shields.io/badge/license-AGPLv3-lightgrey?style=flat-square) ![Build Status](https://img.shields.io/badge/build-passing-success?style=flat-square) [![Go Report Card](https://goreportcard.com/badge/github.com/DrSkyle/CloudSlash)](https://goreportcard.com/report/github.com/DrSkyle/CloudSlash) [![Go Reference](https://pkg.go.dev/badge/github.com/DrSkyle/CloudSlash.svg)](https://pkg.go.dev/github.com/DrSkyle/CloudSlash)
+CloudSlash Desktop is the application: a native window that turns a cloud account into a
+statement you can read. One scan, using the credentials already on your machine — no
+agents, no keys to paste, nothing uploaded.
 
-CloudSlash reads a cloud account and tells you what you are paying for and not using.
+It shows what you are paying for and not using: a statement, a register of every finding
+with its cost, risk and owner, and the artifacts to act on it — a remediation plan, and
+the rollback script that undoes it. Nothing is deleted, only frozen and returned.
 
-One scan, using the credentials already on your machine — no agents, no keys to paste,
-nothing uploaded. It produces a statement of the waste, a register of every finding with
-its cost, risk and owner, and the artifacts to act on it: a remediation plan, and the
-rollback script that undoes it. Nothing is deleted, only frozen and returned.
+![CloudSlash Desktop](assets/desktop-statement.png)
 
-It ships as a desktop application, with a command-line tool and a terminal interface
-alongside it.
-
-![CloudSlash desktop](assets/desktop-statement.png)
+**This is a separate project from [CloudSlash](https://github.com/wearedevilabs/CloudSlash)**, the command-line tool and terminal interface. Both drive the same engine; this repository is the desktop application. Prebuilt installers for macOS, Linux and Windows are on the [releases page](../../releases).
 
 ---
 

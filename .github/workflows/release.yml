@@ -143,11 +143,15 @@ jobs:
           "$RSRC" -ico cmd/cloudslash-desktop/assets/appicon.ico \
             -o cmd/cloudslash-desktop/rsrc_windows_amd64.syso
 
-      # the binary embeds the bundle, so build it first
+      # The binary embeds the bundle, so build it first.
+      #
+      # No key is injected here on purpose. The committed key is RevenueCat's
+      # test store, so a released build completes the purchase flow without
+      # moving anyone's money. An org-level secret overriding it silently is how
+      # a demo binary ended up holding a live key. A live build sets
+      # VITE_REVENUECAT_WEB_API_KEY explicitly in its own environment.
       - name: Bundle the interface
         shell: bash
-        env:
-          VITE_REVENUECAT_WEB_API_KEY: ${{ secrets.VITE_REVENUECAT_WEB_API_KEY }}
         run: |
           cd cmd/cloudslash-desktop/frontend
           npm ci --include=dev

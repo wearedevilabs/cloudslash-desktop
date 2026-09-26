@@ -165,6 +165,21 @@ export function createAccountView(): View {
           hasPlans ? planChooser() : null,
           h("p", { class: "t-small" }, planSummary),
           planActions,
+          // Offered alongside the plans rather than instead of them: this path
+          // works today, and the plans work once the gateway is approved.
+          REVENUECAT.donationUrl
+            ? h(
+                "div",
+                { class: "row-actions" },
+                button({
+                  label: "Support another way",
+                  icon: "external",
+                  variant: "quiet",
+                  size: "sm",
+                  onClick: () => void openExternal(REVENUECAT.donationUrl),
+                }),
+              )
+            : null,
         ],
       }),
     );

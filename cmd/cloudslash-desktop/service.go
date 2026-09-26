@@ -916,6 +916,16 @@ var allowedHosts = []string{
 	"api.revenuecat.com",
 	"pay.revenuecat.com",
 	"app.revenuecat.com",
+	// Donation platforms, so support can be taken without a payment gateway of
+	// the project's own. Add to this list to allow another.
+	"patreon.com",
+	"www.patreon.com",
+	"ko-fi.com",
+	"www.ko-fi.com",
+	"buymeacoffee.com",
+	"www.buymeacoffee.com",
+	"opencollective.com",
+	"liberapay.com",
 }
 
 // OpenExternal opens an https link from the allowlist in the system browser.

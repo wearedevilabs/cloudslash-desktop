@@ -94,10 +94,20 @@ const COMMITTED_OFFERING_ID = "devilabs";
  */
 const COMMITTED_SUPPORT_URL = "";
 
+/**
+ * A donation page — Patreon, Ko-fi, GitHub Sponsors, and the like. Optional, and
+ * the way to accept support with no payment gateway involved. Its host has to be
+ * on the allowlist in lib/links.ts and in the Go service.
+ */
+const COMMITTED_DONATION_URL = "";
+
 /* ------------------------------------------------------------------------ */
 
 const rawSupport = (import.meta.env.VITE_SUPPORT_URL ?? "").trim();
 const SUPPORT_URL = rawSupport || COMMITTED_SUPPORT_URL || LINKS.support;
+
+const rawDonation = (import.meta.env.VITE_DONATION_URL ?? "").trim();
+const DONATION_URL = rawDonation || COMMITTED_DONATION_URL;
 
 export interface RevenueCatConfig {
   webApiKey: string;
@@ -108,6 +118,8 @@ export interface RevenueCatConfig {
   trialDays: number;
   /** Hosted checkout, used when the SDK cannot take the payment. */
   supportUrl: string;
+  /** A donation page, offered alongside the plans. Empty hides it. */
+  donationUrl: string;
   urls: { manage: string; terms: string; privacy: string };
 }
 
@@ -118,6 +130,7 @@ export const REVENUECAT: RevenueCatConfig = {
   currency: rawCurrency || null,
   trialDays: 7,
   supportUrl: SUPPORT_URL,
+  donationUrl: DONATION_URL,
   urls: {
     manage: LINKS.account,
     terms: LINKS.terms,

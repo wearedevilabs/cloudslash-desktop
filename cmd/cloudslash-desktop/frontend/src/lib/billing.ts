@@ -1,4 +1,4 @@
-import { Purchases, type CustomerInfo, type Package } from "@revenuecat/purchases-js";
+import { LogLevel, Purchases, type CustomerInfo, type Package } from "@revenuecat/purchases-js";
 
 import { REVENUECAT, judgeKey, environment as keyEnvironment, type Environment, type KeyVerdict } from "../config/revenuecat";
 
@@ -200,7 +200,9 @@ function describeError(err: unknown): string {
     case 7901: // BackendGatewaySetupErrorSandboxModeOnly
       return "RevenueCat is in sandbox mode but the project is not fully set up for it. Complete the sandbox configuration in the RevenueCat dashboard.";
     default:
-      return message || "RevenueCat returned an error.";
+      // The code is carried through: a backend code the SDK does not know is the
+      // only thing that identifies some failures.
+      return `${message || "RevenueCat returned an error."}${code ? ` (code ${code})` : ""}`;
   }
 }
 
@@ -223,6 +225,12 @@ export async function initPlan(appUserId: string): Promise<PlanState> {
 
   try {
     if (!Purchases.isConfigured()) {
+      // Verbose SDK logging, off unless asked for. The reason a purchase failed
+      // is in these lines and nowhere else.
+      if (import.meta.env.VITE_REVENUECAT_DEBUG === "1") {
+        Purchases.setLogLevel(LogLevel.Debug);
+      }
+
       client = Purchases.configure({
         apiKey: REVENUECAT.webApiKey,
         appUserId,

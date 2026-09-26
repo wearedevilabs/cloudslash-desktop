@@ -82,7 +82,7 @@ const COMMITTED_KEY = "";
 const COMMITTED_ENTITLEMENT_ID = "cloudslash_pro";
 
 /** Pin the app to one offering. Empty uses whichever offering is current. */
-const COMMITTED_OFFERING_ID = "default";
+const COMMITTED_OFFERING_ID = "devilabs";
 
 /**
  * A hosted checkout, used when the SDK cannot take the payment: no key, or a

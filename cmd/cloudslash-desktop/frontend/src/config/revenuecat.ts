@@ -69,11 +69,14 @@ const rawCurrency = (import.meta.env.VITE_REVENUECAT_CURRENCY ?? "").trim();
 /**
  * The Web Billing publishable key.
  *
- * It is designed to be read by whoever has the app, so it is safe in a
- * repository. A secret key (sk_...) is refused outright, see judgeKey below.
- * Leaving it empty is supported: the support dialog falls back to SUPPORT_URL.
+ * A publishable key is readable by anyone who has the app, so it is safe in a
+ * repository: it is inside every binary either way. A secret key (sk_...) is
+ * refused outright, see judgeKey below.
+ *
+ * This is the fallback, so a build with no environment file is still configured.
+ * VITE_REVENUECAT_WEB_API_KEY wins over it when set.
  */
-const COMMITTED_KEY = "";
+const COMMITTED_KEY = "pdl_fFXerNBtFvhbRgQcaBQiGHWonBVy";
 
 /**
  * The entitlement that counts as a supporter. Must match the identifier set on

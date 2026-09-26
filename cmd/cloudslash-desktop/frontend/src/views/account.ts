@@ -162,6 +162,13 @@ export function createAccountView(): View {
             : null,
           !plan.configured ? note("warn", "Billing is not configured in this build", keyProblemMessage(plan.keyProblem)) : null,
           plan.error ? note("warn", "The plan could not be confirmed just now", plan.error) : null,
+          plan.configured && (plan.environment === "test" || plan.sandbox)
+            ? note(
+                "info",
+                "This build uses the test store",
+                "Purchases complete in full without moving any money, so the whole flow can be seen working. To support CloudSlash for real, use the links at the foot of this section.",
+              )
+            : null,
           hasPlans ? planChooser() : null,
           h("p", { class: "t-small" }, planSummary),
           planActions,

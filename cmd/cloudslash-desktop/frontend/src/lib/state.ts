@@ -1,6 +1,7 @@
 import { api, initBackend, type Backend } from "./bridge";
 import { SEVERITY_FLOOR, friendlyType, severity, type Severity } from "./format";
 import { initialPlan, initPlan, purchasePlan, type PlanState } from "./billing";
+import { REVENUECAT } from "../config/revenuecat";
 import { emptySnapshot, defaultPrefs, type Artifact, type AwsEnvironment, type AwsIdentity, type ExportSpec, type Finding, type Prefs, type Profile, type RemediationResult, type Snapshot, type Verification, type VerificationStatus } from "./types";
 
 export type ScreenID = "statement" | "register" | "topology" | "artifacts" | "account" | "settings";
@@ -153,10 +154,23 @@ export async function purchaseSelectedPlan(): Promise<void> {
 
   const outcome = await purchasePlan(id);
   switch (outcome.kind) {
-    case "purchased":
-      toast("success", "Thank you", "Your support is recorded against this install.");
+    case "purchased": {
+      // A test-store or sandbox purchase moves no money, so saying "thank you"
+      // would be a lie. Say what happened, and offer the way to do it for real.
+      const simulated = state.plan.environment === "test" || state.plan.sandbox;
+      const firstLink = REVENUECAT.donationLinks[0];
+
+      toast(
+        "success",
+        simulated ? "That completed in the test store" : "Thank you",
+        simulated
+          ? "Nothing was charged: this build is pointed at RevenueCat's test store. To support CloudSlash for real, use one of the links on the Account screen."
+          : "Your support is recorded against this install.",
+        simulated && firstLink ? { label: `Support on ${firstLink.label}`, url: firstLink.url } : undefined,
+      );
       await refreshPlan();
       break;
+    }
     case "cancelled":
       // Backing out of a checkout is a decision, not a failure.
       break;

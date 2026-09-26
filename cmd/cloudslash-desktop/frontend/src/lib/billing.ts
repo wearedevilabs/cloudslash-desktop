@@ -343,9 +343,16 @@ export async function recheckPlan(): Promise<PlanState> {
   }
 }
 
-/** Open RevenueCat's hosted customer portal, where a plan is changed or cancelled. */
+/**
+ * Where a supporter changes or cancels, exactly as RevenueCat reports it.
+ *
+ * There is no fallback on purpose. The app has no cancellation flow of its own,
+ * and Paddle owns subscription management, so RevenueCat is the only source that
+ * can know. Sending someone to a marketing page instead would be worse than
+ * showing them nothing, so the caller hides the action when this is null.
+ */
 export function managementTarget(): string | null {
-  return cached.managementURL ?? (cached.pro ? REVENUECAT.urls.manage : null);
+  return cached.managementURL;
 }
 
 export function sandboxActive(): boolean {

@@ -986,6 +986,39 @@
   margin-right: var(--s2);
 }
 
+/* A second way to support, set apart so it reads as an offered alternative
+   rather than fine print. The accent marks the block without competing with the
+   single primary action above it. */
+.support-alt {
+  margin-top: var(--s6);
+  padding: var(--s4) var(--s5);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--waste);
+  border-radius: var(--radius);
+  background: var(--paper);
+  display: grid;
+  gap: var(--s3);
+}
+
+.support-alt__title {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--waste);
+}
+
+.support-alt__note {
+  font-size: var(--t-small);
+  color: var(--ink-2);
+}
+
+.support-alt__row {
+  display: flex;
+  gap: var(--s3);
+  flex-wrap: wrap;
+}
+
 /* ---- segmented control ------------------------------------------------- */
 
 .seg {

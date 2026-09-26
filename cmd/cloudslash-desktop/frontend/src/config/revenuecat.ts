@@ -120,7 +120,6 @@ export interface RevenueCatConfig {
   supportUrl: string;
   /** Donation pages, offered alongside the plans. Empty hides them. */
   donationLinks: Array<{ label: string; url: string }>;
-  urls: { manage: string; terms: string; privacy: string };
 }
 
 export const REVENUECAT: RevenueCatConfig = {
@@ -131,11 +130,6 @@ export const REVENUECAT: RevenueCatConfig = {
   trialDays: 7,
   supportUrl: SUPPORT_URL,
   donationLinks: COMMITTED_DONATION_LINKS,
-  urls: {
-    manage: LINKS.account,
-    terms: LINKS.terms,
-    privacy: LINKS.privacy,
-  },
 };
 
 export type KeyVerdict =

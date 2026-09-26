@@ -332,6 +332,11 @@ for (const screen of SCREENS) {
     await page.evaluate(() => document.fonts.ready);
     await page.waitForSelector(".view__inner", { timeout: 15000 });
 
+    // The plans arrive from RevenueCat, so give them a moment before judging the
+    // section. A timeout is not a failure: offline, the section still has to
+    // render coherently, and the checks below tolerate no plans at all.
+    await page.waitForSelector('.plans input[type="radio"]', { timeout: 10000 }).catch(() => {});
+
     const found = await page.evaluate(() => {
       const sections = [...document.querySelectorAll(".panel__title")].filter((n) =>
         (n.textContent || "").includes("CloudSlash Support"),

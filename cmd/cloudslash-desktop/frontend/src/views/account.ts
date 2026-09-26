@@ -177,16 +177,23 @@ export function createAccountView(): View {
           REVENUECAT.donationLinks.length
             ? h(
                 "div",
-                { class: "row-actions" },
-                h("span", { class: "row-actions__label" }, "Or support on"),
-                ...REVENUECAT.donationLinks.map((link) =>
-                  button({
-                    label: link.label,
-                    icon: "external",
-                    variant: "quiet",
-                    size: "sm",
-                    onClick: () => void openExternal(link.url),
-                  }),
+                { class: "support-alt" },
+                h("span", { class: "support-alt__title" }, "Also support on"),
+                h(
+                  "p",
+                  { class: "support-alt__note" },
+                  "If the checkout above is not available to you, these go straight to the project.",
+                ),
+                h(
+                  "div",
+                  { class: "support-alt__row" },
+                  ...REVENUECAT.donationLinks.map((link) =>
+                    button({
+                      label: link.label,
+                      icon: "external",
+                      onClick: () => void openExternal(link.url),
+                    }),
+                  ),
                 ),
               )
             : null,

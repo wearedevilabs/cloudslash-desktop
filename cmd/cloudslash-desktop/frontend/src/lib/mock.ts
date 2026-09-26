@@ -198,7 +198,9 @@ let snapshot: Snapshot = {
 };
 
 const PROFILE: Profile = {
-  UserID: "cs_7f21bd94c3a8",
+  // A fresh id, so a preview never inherits an entitlement bought against an
+  // earlier one. A real install generates its own, so it is always clean.
+  UserID: "cs_9d4e7b21fa60",
   Version: "2.2.6",
   License: "AGPLv3 (Enterprise)",
   OutputDir: "~/Documents/CloudSlash",

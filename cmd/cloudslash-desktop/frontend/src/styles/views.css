@@ -19,6 +19,35 @@
   flex-wrap: wrap;
 }
 
+/* The file bar: where the artifacts are, and what can be done to them. */
+.toolbar--file {
+  justify-content: space-between;
+  gap: var(--s4);
+}
+
+.toolbar__path {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+.toolbar__dir {
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 44ch;
+  direction: rtl;
+  text-align: left;
+}
+
+.scanbar__detected {
+  color: var(--ink-4);
+  font-size: var(--t-small);
+  margin-left: var(--s3);
+}
+
 .toolbar__group {
   display: inline-flex;
   align-items: center;

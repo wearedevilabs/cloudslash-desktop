@@ -298,7 +298,7 @@ function buildScanBar() {
     id: "scan-region",
     type: "text",
     value: state.prefs.Region,
-    placeholder: "us-east-1",
+    placeholder: "detect automatically",
     autocomplete: "off",
     spellcheck: "false",
     "aria-label": "AWS region",
@@ -306,7 +306,8 @@ function buildScanBar() {
   regionInput.addEventListener("input", () => {
     state.prefs.Region = regionInput.value.trim();
   });
-  regionInput.addEventListener("change", () => void savePrefs({ Region: regionInput.value.trim() || "us-east-1" }));
+  regionInput.addEventListener("change", () => void savePrefs({ Region: regionInput.value.trim() }));
+  const regionHint = h("span", { class: "scanbar__detected" });
 
   const demoInput = h("input", { type: "checkbox", id: "scan-demo", checked: state.prefs.Demo });
   demoInput.addEventListener("change", () => void savePrefs({ Demo: demoInput.checked }));
@@ -346,6 +347,7 @@ function buildScanBar() {
       { class: "scanbar__field", for: "scan-region" },
       h("span", { class: "fact__k" }, "region"),
       regionInput,
+      regionHint,
     ),
     profileField,
     verifyButton,
@@ -402,6 +404,8 @@ function buildScanBar() {
     regionInput.disabled = scanning;
     demoInput.disabled = scanning;
     profileSelect.disabled = scanning;
+
+    regionHint.textContent = state.prefs.Region.trim() ? "" : state.awsDetected ? `using ${state.awsDetected.Source}` : "";
 
     statusText.textContent = statusLine();
 

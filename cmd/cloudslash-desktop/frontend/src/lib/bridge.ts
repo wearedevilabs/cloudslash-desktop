@@ -1,6 +1,6 @@
 import { Call } from "@wailsio/runtime";
 
-import { emptySnapshot, type Artifact, type AwsIdentity, type AwsProfiles, type ExportSpec, type Prefs, type Profile, type RemediationResult, type Snapshot, type Verification, type VerificationStatus } from "./types";
+import { emptySnapshot, type Artifact, type AwsEnvironment, type AwsIdentity, type AwsProfiles, type ExportSpec, type Prefs, type Profile, type RemediationResult, type Snapshot, type Verification, type VerificationStatus } from "./types";
 import { mockBackend } from "./mock";
 
 /**
@@ -34,6 +34,8 @@ export interface Backend {
   verifyEntitlement(): Promise<Verification>;
   /** Profiles available in the local AWS configuration. */
   awsProfiles(): Promise<AwsProfiles>;
+  /** Profiles plus the region and profile that would be used by default. */
+  detectAws(): Promise<AwsEnvironment>;
   /** Confirm a profile works, by asking STS who it is. */
   verifyAws(profile: string, region: string): Promise<AwsIdentity>;
   /** Run a generated remediation script, capturing what it printed. */
@@ -74,6 +76,7 @@ const nativeBackend: Backend = {
   verificationStatus: () => Call.ByName(`${SERVICE}.VerificationStatus`) as Promise<VerificationStatus>,
   verifyEntitlement: () => Call.ByName(`${SERVICE}.VerifyEntitlement`) as Promise<Verification>,
   awsProfiles: () => Call.ByName(`${SERVICE}.AwsProfiles`) as Promise<AwsProfiles>,
+  detectAws: () => Call.ByName(`${SERVICE}.DetectAws`) as Promise<AwsEnvironment>,
   verifyAws: (profile, region) => Call.ByName(`${SERVICE}.VerifyAws`, profile, region) as Promise<AwsIdentity>,
   runRemediation: (script) => Call.ByName(`${SERVICE}.RunRemediation`, script) as Promise<RemediationResult>,
 };

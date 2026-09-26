@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=CloudSlash
+Comment=Autonomous cloud waste detection
+Exec=cloudslash-desktop
+Icon=cloudslash
+Terminal=false
+Categories=Development;Utility;

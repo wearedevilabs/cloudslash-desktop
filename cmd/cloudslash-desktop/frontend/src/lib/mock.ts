@@ -405,6 +405,17 @@ export const mockBackend = {
     await delay(40);
   },
 
+  async detectAws() {
+    await delay(40);
+    return {
+      Profiles: ["default"],
+      Profile: "default",
+      Region: "us-east-1",
+      Source: "us-east-1 (default)",
+      Error: "",
+    };
+  },
+
   async chooseDirectory() {
     await delay(40);
     // No native picker in a browser preview.

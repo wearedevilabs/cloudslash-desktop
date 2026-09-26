@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 )
@@ -227,8 +226,9 @@ func TestSavePrefsRoundTrips(t *testing.T) {
 	}
 }
 
-// TestSavePrefsGuardsRequiredFields: clearing the region or output directory in
-// the UI must not leave the engine without somewhere to write.
+// TestSavePrefsGuardsRequiredFields: clearing the output directory in the UI
+// must not leave the engine without somewhere to write. An empty region is a
+// valid choice, because it means the region is detected instead.
 func TestSavePrefsGuardsRequiredFields(t *testing.T) {
 	d := newTestDesktop(t)
 
@@ -238,9 +238,6 @@ func TestSavePrefsGuardsRequiredFields(t *testing.T) {
 	}
 
 	prefs := d.Prefs()
-	if strings.TrimSpace(prefs.Region) == "" {
-		t.Error("region was left empty")
-	}
 	if prefs.OutputDir == "" {
 		t.Error("output directory was left empty")
 	}

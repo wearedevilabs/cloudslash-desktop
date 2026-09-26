@@ -8,6 +8,17 @@
 
 export type ScanStatus = "ready" | "scanning" | "complete" | "cancelled" | "failed";
 
+/** What could be inferred about AWS on this machine, without being asked. */
+export interface AwsEnvironment {
+  Profiles: string[];
+  /** The profile to use when there is no choice to make. */
+  Profile: string;
+  Region: string;
+  /** Human-readable note on where the region came from. */
+  Source: string;
+  Error: string;
+}
+
 export interface Finding {
   ID: string;
   Type: string;

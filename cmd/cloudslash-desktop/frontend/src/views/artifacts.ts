@@ -2,12 +2,15 @@ import { h } from "../lib/dom";
 import {
   askRemediation,
   cancelRemediation,
+  chooseDirectory,
+  exportAll,
   exportArtifact,
   openArtifact,
   openExternal,
   openOutputDir,
   refreshArtifacts,
   runRemediation,
+  savePrefs,
   state,
 } from "../lib/state";
 import { LINKS } from "../lib/links";
@@ -44,9 +47,68 @@ export function createArtifactsView(): View {
   const inner = h("div", { class: "view__inner" });
   el.append(inner);
 
+  /** The two-press control for a generated script, shared by the bar and the list. */
+  function remediationAction(name: string): Node {
+    const info = RUNNABLE[name];
+    const pending = state.remediation.script === name;
+
+    if (pending && state.remediation.stage === "confirm") {
+      return h(
+        "div",
+        { class: "confirm" },
+        h("span", { class: "confirm__label" }, "Run it now?"),
+        button({ label: "Cancel", variant: "quiet", size: "sm", onClick: () => cancelRemediation() }),
+        button({ label: "Run it", size: "sm", onClick: () => void runRemediation() }),
+      );
+    }
+    if (pending) {
+      return h("span", { class: "confirm__label" }, "Running…");
+    }
+    return button({ label: info.label, icon: "play", size: "sm", onClick: () => askRemediation(name) });
+  }
+
+  /** The file bar: where artifacts go, and everything that acts on them. */
+  function fileToolbar(scanned: boolean, present: Set<string>): Node {
+    const folder = state.profile?.OutputDir ?? "";
+    const scripts = Object.keys(RUNNABLE).filter((name) => present.has(name));
+
+    return h(
+      "div",
+      { class: "toolbar toolbar--file" },
+      h(
+        "div",
+        { class: "toolbar__path" },
+        h("span", { class: "fact__k" }, "folder"),
+        h("span", { class: "toolbar__dir t-figure", title: folder }, folder || "not set"),
+      ),
+      h(
+        "div",
+        { class: "row" },
+        button({
+          label: "Choose…",
+          icon: "folder",
+          variant: "quiet",
+          size: "sm",
+          onClick: () => void chooseDirectory("Choose the artifact folder", folder, (path) => savePrefs({ OutputDir: path })),
+        }),
+        button({ label: "Show folder", icon: "external", variant: "quiet", size: "sm", onClick: () => void openOutputDir() }),
+        button({ label: "Refresh", icon: "refresh", variant: "quiet", size: "sm", onClick: () => void refreshArtifacts() }),
+        button({
+          label: state.exporting ? "Writing…" : "Generate all",
+          icon: "download",
+          size: "sm",
+          disabled: !scanned || Boolean(state.exporting),
+          onClick: () => void exportAll(),
+        }),
+        ...scripts.map((name) => remediationAction(name)),
+      ),
+    );
+  }
+
   function update(): void {
     const { snapshot, artifacts, exports } = state;
     const scanned = snapshot.Status === "complete";
+    const present = new Set(artifacts.map((artifact) => artifact.Name));
 
     const sections: Node[] = [
       h("div", { class: "view__title" }, h("h1", {}, "Artifacts"), h("span", { class: "t-stamp" }, "on disk")),
@@ -55,11 +117,11 @@ export function createArtifactsView(): View {
         { class: "view__lede" },
         "Reports and remediation artifacts, written locally. Nothing is uploaded, and nothing is deleted without a script you run yourself.",
       ),
+      fileToolbar(scanned, present),
     ];
 
     /* -- generate ------------------------------------------------------ */
     // Every artifact is free; none is gated.
-    const present = new Set(artifacts.map((artifact) => artifact.Name));
 
     const rows = exports.map((spec) => {
       const exists = present.has(spec.FileName);
@@ -125,35 +187,16 @@ export function createArtifactsView(): View {
           { class: "list" },
           ...artifacts.map((artifact) => {
             const runnable = RUNNABLE[artifact.Name];
-            const pending = state.remediation.script === artifact.Name;
 
-            let action: Node;
-            if (runnable && pending && state.remediation.stage === "confirm") {
-              action = h(
-                "div",
-                { class: "confirm" },
-                h("span", { class: "confirm__label" }, "Run it now?"),
-                button({ label: "Cancel", variant: "quiet", size: "sm", onClick: () => cancelRemediation() }),
-                button({ label: "Run it", size: "sm", onClick: () => void runRemediation() }),
-              );
-            } else if (runnable && pending) {
-              action = h("span", { class: "confirm__label" }, "Running…");
-            } else if (runnable) {
-              action = button({
-                label: runnable.label,
-                icon: "play",
-                size: "sm",
-                onClick: () => askRemediation(artifact.Name),
-              });
-            } else {
-              action = button({
-                label: "Open",
-                icon: "external",
-                variant: "quiet",
-                size: "sm",
-                onClick: () => void openArtifact(artifact.Name),
-              });
-            }
+            const action: Node = runnable
+              ? remediationAction(artifact.Name)
+              : button({
+                  label: "Open",
+                  icon: "external",
+                  variant: "quiet",
+                  size: "sm",
+                  onClick: () => void openArtifact(artifact.Name),
+                });
 
             return h(
               "div",
@@ -184,12 +227,7 @@ export function createArtifactsView(): View {
     sections.push(
       panel({
         title: "On disk",
-        action: h(
-          "div",
-          { class: "row" },
-          button({ label: "Refresh", icon: "refresh", variant: "quiet", size: "sm", onClick: () => void refreshArtifacts() }),
-          button({ label: "Show folder", icon: "folder", variant: "quiet", size: "sm", onClick: () => void openOutputDir() }),
-        ),
+        note: artifacts.length ? `${num(artifacts.length)} files` : undefined,
         body: disk,
       }),
     );

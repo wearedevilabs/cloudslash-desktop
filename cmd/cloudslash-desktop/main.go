@@ -23,6 +23,12 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+// The window, taskbar and dock icon. Regenerate it from assets/appicon.svg with
+// `npm run icons` in frontend/.
+//
+//go:embed assets/appicon.png
+var appIcon []byte
+
 func main() {
 	// The bundle lives under frontend/dist in the module, but the asset server
 	// serves the root of the filesystem it is given.
@@ -36,6 +42,7 @@ func main() {
 	app := application.New(application.Options{
 		Name:        "CloudSlash",
 		Description: "Autonomous cloud waste detection",
+		Icon:        appIcon,
 		Services: []application.Service{
 			application.NewServiceWithOptions(service, application.ServiceOptions{Name: "Desktop"}),
 		},

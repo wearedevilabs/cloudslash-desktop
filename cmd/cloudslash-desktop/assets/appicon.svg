@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="CloudSlash">
+  <rect width="512" height="512" rx="116" fill="#262421"/>
+  <g stroke="#EDE7DC" stroke-width="30" stroke-linecap="butt">
+    <line x1="92" y1="158" x2="420" y2="158"/>
+    <line x1="92" y1="252" x2="356" y2="252"/>
+    <line x1="92" y1="346" x2="292" y2="346"/>
+  </g>
+  <line x1="92" y1="430" x2="238" y2="430" stroke="#C8452A" stroke-width="54" stroke-linecap="butt"/>
+</svg>

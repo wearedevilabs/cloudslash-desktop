@@ -11,7 +11,7 @@ cloudslash-out/
 .ignore.yaml
 
 # Verification scratch
-/.verify/
+.verify/
 
 # OS noise
 .DS_Store

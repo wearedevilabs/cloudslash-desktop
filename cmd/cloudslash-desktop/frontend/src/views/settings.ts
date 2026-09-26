@@ -1,5 +1,5 @@
 import { h } from "../lib/dom";
-import { openExternal, openOutputDir, savePrefs, state } from "../lib/state";
+import { openExternal, chooseDirectory, openOutputDir, savePrefs, state } from "../lib/state";
 import { LINKS } from "../lib/links";
 import { button, note, panel } from "../ui/bits";
 import type { View } from "../ui/contracts";
@@ -27,6 +27,8 @@ interface FieldSpec {
   step?: string;
   min?: number;
   max?: number;
+  /** Title for the native folder picker, when this field names a path. */
+  choose?: string;
 }
 
 interface Group {
@@ -59,6 +61,7 @@ const GROUPS: Group[] = [
         kind: "text",
         placeholder: "/path/to/terraform.tfstate",
         hint: "Correlate live resources with the code that created them.",
+        choose: "Choose the Terraform state file",
       },
     ],
   },
@@ -169,8 +172,9 @@ const GROUPS: Group[] = [
         key: "OutputDir",
         label: "Artifact directory",
         kind: "text",
-        placeholder: "cloudslash-out",
+        placeholder: "~/Documents/CloudSlash",
         hint: "Reports, remediation scripts and tombstones are written here. Accepts an s3:// location.",
+        choose: "Choose the artifact folder",
       },
     ],
   },
@@ -262,7 +266,24 @@ export function createSettingsView(): View {
             h("span", { class: "setting__label" }, spec.label),
             spec.hint ? h("span", { class: "setting__hint" }, spec.hint) : null,
           ),
-          input,
+          h(
+            "div",
+            { class: "row" },
+            input,
+            spec.choose
+              ? button({
+                  label: "Choose…",
+                  icon: "folder",
+                  variant: "quiet",
+                  size: "sm",
+                  onClick: () =>
+                    void chooseDirectory(spec.choose as string, String(state.prefs[spec.key] ?? ""), async (path) => {
+                      input.value = path;
+                      await savePrefs({ [spec.key]: path } as Partial<Prefs>);
+                    }),
+                })
+              : null,
+          ),
         );
       });
 

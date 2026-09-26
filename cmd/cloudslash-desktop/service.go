@@ -147,7 +147,7 @@ type PrefsDTO struct {
 
 func defaultPrefs() PrefsDTO {
 	return PrefsDTO{
-		Region: "us-east-1",
+		Region: "",
 		// A live account is the default. Demo mode is synthetic data, so it is
 		// opted into rather than assumed.
 		Demo:           false,
@@ -273,8 +273,9 @@ func loadOrCreateProfile(path string, prefs *PrefsDTO) string {
 		}
 	}
 
-	// The file is always written complete, so a region is proof it is ours.
-	if state.Prefs.Region != "" {
+	// The file is always written complete, so a saved output directory is proof
+	// it is ours.
+	if state.Prefs.OutputDir != "" {
 		restored := state.Prefs
 		if restored.OutputDir == "" {
 			restored.OutputDir = defaultPrefs().OutputDir
@@ -343,9 +344,7 @@ func (d *Desktop) SavePrefs(update PrefsDTO) error {
 
 	// Guard the fields that must never be empty, so a cleared input cannot
 	// leave the engine without an output directory.
-	if strings.TrimSpace(next.Region) == "" {
-		next.Region = defaults.Region
-	}
+	// An empty region is a valid setting: it means "work it out".
 	if strings.TrimSpace(next.OutputDir) == "" {
 		next.OutputDir = defaults.OutputDir
 	}
@@ -378,13 +377,53 @@ func (d *Desktop) AwsProfiles() AwsProfilesDTO {
 	return AwsProfilesDTO{Profiles: profiles}
 }
 
+// AwsEnvironment is what can be inferred about AWS on this machine.
+type AwsEnvironment struct {
+	Profiles []string `json:"Profiles"`
+	Profile  string   `json:"Profile"`
+	Region   string   `json:"Region"`
+	Source   string   `json:"Source"`
+	Error    string   `json:"Error"`
+}
+
+// DetectAws reports the profiles present and the region that would be used, so
+// the interface can fill those in rather than asking.
+func (d *Desktop) DetectAws() AwsEnvironment {
+	out := AwsEnvironment{Profiles: []string{}}
+
+	profiles, err := engineaws.ListProfiles()
+	if err != nil {
+		out.Error = err.Error()
+	} else {
+		sort.Strings(profiles)
+		out.Profiles = profiles
+		// Exactly one profile is not a choice, so it needs no confirmation.
+		if len(profiles) == 1 {
+			out.Profile = profiles[0]
+		}
+	}
+
+	d.mu.RLock()
+	configured := d.prefs.Profile
+	d.mu.RUnlock()
+
+	profile := configured
+	if profile == "" {
+		profile = out.Profile
+	}
+
+	out.Region = engineaws.ResolveRegion(profile)
+	out.Source = engineaws.DescribeRegion(profile)
+	return out
+}
+
 // VerifyAws confirms that a profile can actually be used, by asking STS who it
 // is. A profile that authenticates is worth more than one that is merely
 // present, and the answer is the account, not a credential.
 func (d *Desktop) VerifyAws(profile, region string) AwsIdentity {
 	profile = strings.TrimSpace(profile)
 	if strings.TrimSpace(region) == "" {
-		region = defaultPrefs().Region
+		region = engineaws.ResolveRegion(profile)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -493,6 +532,11 @@ func (d *Desktop) StartScan(region string, demo bool) error {
 	prefs := d.prefs
 	if strings.TrimSpace(region) != "" {
 		prefs.Region = strings.TrimSpace(region)
+	}
+	// Nothing has to be chosen before a first scan: an empty region is resolved
+	// from the machine's environment and AWS configuration.
+	if strings.TrimSpace(prefs.Region) == "" {
+		prefs.Region = engineaws.ResolveRegion(prefs.Profile)
 	}
 	d.prefs.Region = prefs.Region
 	d.prefs.Demo = demo

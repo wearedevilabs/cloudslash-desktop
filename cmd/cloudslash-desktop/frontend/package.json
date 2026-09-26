@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview --port 4173 --strictPort",
     "typecheck": "tsc --noEmit",
+    "icons": "node scripts/make-icons.mjs",
     "verify": "node scripts/verify-ui.mjs"
   },
   "devDependencies": {

@@ -191,8 +191,11 @@ jobs:
         if: matrix.kind == 'linux'
         run: |
           set -euo pipefail
-          tar -czf dist/cloudslash-desktop_linux_amd64.tar.gz -C dist cloudslash-desktop
-          rm -f dist/cloudslash-desktop
+          cp cmd/cloudslash-desktop/assets/appicon.png dist/cloudslash.png
+          cp cmd/cloudslash-desktop/assets/cloudslash.desktop dist/cloudslash.desktop
+          tar -czf dist/cloudslash-desktop_linux_amd64.tar.gz -C dist \
+            cloudslash-desktop cloudslash.png cloudslash.desktop
+          rm -f dist/cloudslash-desktop dist/cloudslash.png dist/cloudslash.desktop
           ls -lh dist
 
       # -------------------------------------------------------------- windows
@@ -213,9 +216,10 @@ jobs:
         if: matrix.kind == 'windows'
         shell: pwsh
         run: |
-          Compress-Archive -Path dist/cloudslash-desktop.exe `
+          Copy-Item cmd/cloudslash-desktop/assets/appicon.ico dist/cloudslash.ico
+          Compress-Archive -Path dist/cloudslash-desktop.exe, dist/cloudslash.ico `
             -DestinationPath dist/cloudslash-desktop_windows_amd64.zip
-          Remove-Item dist/cloudslash-desktop.exe
+          Remove-Item dist/cloudslash-desktop.exe, dist/cloudslash.ico
           Get-ChildItem dist
 
       # ---------------------------------------------------------------- macOS
@@ -242,6 +246,7 @@ jobs:
           mkdir -p "${app}/Contents/MacOS" "${app}/Contents/Resources"
           mv dist/.desktop-universal "${app}/Contents/MacOS/cloudslash-desktop"
           chmod +x "${app}/Contents/MacOS/cloudslash-desktop"
+          iconutil -c icns cmd/cloudslash-desktop/assets/appicon.iconset -o "${app}/Contents/Resources/AppIcon.icns"
 
           cat <<PLIST | sed 's/^[[:space:]]*//' > "${app}/Contents/Info.plist"
           <?xml version="1.0" encoding="UTF-8"?>
@@ -251,6 +256,7 @@ jobs:
             <key>CFBundleName</key><string>CloudSlash</string>
             <key>CFBundleDisplayName</key><string>CloudSlash</string>
             <key>CFBundleExecutable</key><string>cloudslash-desktop</string>
+            <key>CFBundleIconFile</key><string>AppIcon</string>
             <key>CFBundleIdentifier</key><string>io.cloudslash.desktop</string>
             <key>CFBundlePackageType</key><string>APPL</string>
             <key>CFBundleShortVersionString</key><string>${version}</string>

@@ -1,7 +1,7 @@
 import { api, initBackend, type Backend } from "./bridge";
 import { SEVERITY_FLOOR, friendlyType, severity, type Severity } from "./format";
 import { initialPlan, initPlan, type PlanState } from "./billing";
-import { emptySnapshot, defaultPrefs, type Artifact, type AwsIdentity, type ExportSpec, type Finding, type Prefs, type Profile, type RemediationResult, type Snapshot, type Verification, type VerificationStatus } from "./types";
+import { emptySnapshot, defaultPrefs, type Artifact, type AwsEnvironment, type AwsIdentity, type ExportSpec, type Finding, type Prefs, type Profile, type RemediationResult, type Snapshot, type Verification, type VerificationStatus } from "./types";
 
 export type ScreenID = "statement" | "register" | "topology" | "artifacts" | "account" | "settings";
 
@@ -55,6 +55,8 @@ export interface AppState {
   /** AWS profiles found on this machine, and why not when there are none. */
   awsProfiles: string[];
   awsProfilesError: string;
+  /** What could be inferred about AWS here, without being asked. */
+  awsDetected: AwsEnvironment | null;
   /** The last confirmed AWS identity. */
   awsIdentity: AwsIdentity | null;
   verifyingAws: boolean;
@@ -90,6 +92,7 @@ const initial: AppState = {
   verifying: false,
   awsProfiles: [],
   awsProfilesError: "",
+  awsDetected: null,
   awsIdentity: null,
   verifyingAws: false,
   remediation: { script: "", stage: "idle" },
@@ -324,7 +327,7 @@ export async function boot(): Promise<void> {
   // Nothing is read on launch. A scan of a live account reaches out to AWS, so it
   // only happens when the operator asks for it; the interface opens on a
   // statement of nothing, with the way to start one in front of them.
-  void loadAwsProfiles();
+  void detectAws();
 
   // Entitlement resolution is RevenueCat's job, and it happens with a public
   // key against the hosted checkout. There is no key to enter and nothing
@@ -450,6 +453,17 @@ export async function openArtifact(name: string): Promise<void> {
   }
 }
 
+/** Generate every artifact in one pass, for when a folder should be complete. */
+export async function exportAll(): Promise<void> {
+  if (state.exporting) return;
+
+  for (const spec of state.exports) {
+    if (spec.Ready) await exportArtifact(spec.Kind);
+  }
+  await refreshArtifacts();
+  toast("success", "Artifacts generated", "Every report is now in the artifact folder.");
+}
+
 export async function openOutputDir(): Promise<void> {
   try {
     await api().openOutputDir();
@@ -510,6 +524,28 @@ export async function loadAwsProfiles(): Promise<void> {
     set({ awsProfiles: result.Profiles ?? [], awsProfilesError: result.Error ?? "" });
   } catch (err) {
     set({ awsProfiles: [], awsProfilesError: String(err) });
+  }
+}
+
+/**
+ * Work out what this machine already says about AWS, so a first scan needs no
+ * configuration. A single profile is not a choice, so it is adopted outright;
+ * anything more than one is left for the operator.
+ */
+export async function detectAws(): Promise<void> {
+  try {
+    const detected = await api().detectAws();
+    set({
+      awsDetected: detected,
+      awsProfiles: detected.Profiles ?? [],
+      awsProfilesError: detected.Error ?? "",
+    });
+
+    if (!state.prefs.Profile && detected.Profile) {
+      await savePrefs({ Profile: detected.Profile });
+    }
+  } catch (err) {
+    set({ awsDetected: null, awsProfiles: [], awsProfilesError: String(err) });
   }
 }
 

@@ -577,25 +577,45 @@ CloudSlash can notify your team directly when cost velocity anomalies are detect
 
 ## CloudSlash Desktop (GUI)
 
-CloudSlash ships a native desktop application built with Fyne. It drives the same engine as the CLI and works fully offline in **Demo mode** against synthetic AWS data.
+CloudSlash ships a desktop application: a native window around a purpose-built interface, driving the same engine as the CLI and working fully offline in **Demo mode** against synthetic AWS data.
+
+The interface is set like an audit statement (it is a forensic tool, after all): a running total you can always see, a register of line items, and charts you can click to jump straight to the rows behind them. Nothing is uploaded, and there is no API key to enter — entitlement is resolved through RevenueCat's SDK against a publishable key, and payment happens on RevenueCat's hosted checkout.
 
 ### Run it
 
 ```bash
-# macOS and Linux (requires Go 1.25+ and a C toolchain, e.g. Xcode command line tools)
+# macOS and Linux. Needs Go 1.25+, Node, and the platform GUI toolchain:
+#   Linux  : gtk4 and webkitgtk-6.0 development packages
+#   macOS  : Xcode command line tools
 make desktop
 ./bin/cloudslash-desktop
 ```
 
-The app opens on **Overview** and runs a demo scan immediately. Untick **Demo mode**, set a region and press **Run scan** to analyse a live AWS account through your standard credential chain.
+The app opens on **Statement** and runs a demo scan immediately. Turn off **Demo mode** in the command bar and press **Run scan** to analyse a live AWS account through your standard credential chain.
 
 Screens:
 
-- **Overview**: scan configuration, headline KPIs (monthly/annual waste, resources, findings), scan summary, top opportunities and a waste-by-service breakdown.
-- **Findings**: searchable, sortable list with a detail pane showing cost, risk, ownership and raw resource properties.
-- **Topology**: where waste concentrates across services, by absolute cost.
-- **Reports**: export JSON/CSV, an executive summary, remediation plans and HTML dashboards; lists every generated artifact.
-- **Pro**: subscription state and the RevenueCat connection.
+- **Statement** — the headline account: recoverable spend per month, where it concentrates, and the largest single items behind it.
+- **Register** — every finding as a line item, filterable and keyboard-navigable, with an inspector showing the evidence, cost, risk and raw properties.
+- **Topology** — the same money read by service and by region, to show how few things usually account for most of it.
+- **Artifacts** — generate reports and remediation plans, and the order to run them in.
+- **Account** — plan, entitlement, and a support reference.
+- **Settings** — exactly the inputs the command line accepts: scope, policy rules, Terraform state, notifications, telemetry, output.
+
+### Working on the interface
+
+The interface is a Vite + TypeScript bundle in `cmd/cloudslash-desktop/frontend`, embedded into the binary at build time. The Go service it talks to is `cmd/cloudslash-desktop/service.go`.
+
+```bash
+make desktop-frontend   # bundle the interface
+make desktop-test       # scan, export, allowlist and preference tests
+make desktop-verify     # layout, contrast and typography audit across all screens
+```
+
+`desktop-verify` drives every screen in headless Chromium and fails the build on clipped text, overlapping elements, contrast below 4.5:1, unreadably small hit targets, or copy that went missing. It is worth running after any styling change.
+
+Billing configuration is documented in `frontend/.env.example`. Only a RevenueCat **publishable** key (`rcb_…`) is ever accepted: the build refuses a secret key rather than shipping one.
+
 
 ### Pro features and RevenueCat
 

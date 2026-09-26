@@ -1,0 +1,111 @@
+/* Design tokens.
+ *
+ * One canvas, one ink ramp, one accent. Whitespace and hairlines divide the
+ * interface; boxes do not.
+ *
+ * Two constraints hold the palette together:
+ *
+ *   1. The canvas is warm charcoal, not black. Pure black against bright text is
+ *      the harshest combination a screen can produce, and it crushes the hairlines
+ *      the layout depends on. #1e1c1a keeps a paper-like warmth in the dark.
+ *
+ *   2. The accent is vermilion, not neon. A deep oxide red is unreadable on a
+ *      dark canvas, so the red is lifted just far enough to carry small text. It
+ *      means one thing: money that is being lost.
+ *
+ * Every ink value below clears 4.5:1 on both --paper and --surface, verified by
+ * scripts/verify-ui.mjs rather than by eye. The rail, the balance band and the
+ * masthead sit on --paper; the toast sits on --surface.
+ */
+
+:root {
+  /* -- materials --------------------------------------------------------- */
+  --paper: #1e1c1a; /* the canvas */
+  --surface: #262421; /* raised: toasts, inspector wells */
+  --sunk: #151311; /* inset: inputs, bar tracks */
+
+  /* -- ink: a four-step ramp, all of it legible on paper and on surface --- */
+  --ink: #ece7de; /* figures, headings     14.9:1 / 13.6:1 */
+  --ink-2: #c6c0b4; /* body                   8.9:1 /  8.1:1 */
+  --ink-3: #a8a296; /* secondary             6.7:1 /  6.1:1 */
+  --ink-4: #948e83; /* quiet labels, meta    5.2:1 /  4.8:1 */
+
+  --rule: #2c2a26;
+  --rule-strong: #3d3a35;
+
+  /* -- the one accent. Lifted off the deep oxide used on paper: that red is
+   *    unreadable on charcoal, and this one still clears 4.5:1 on both the
+   *    canvas and the raised surface. ----------------------------------- */
+  --waste: #e26b50;
+  --waste-deep: #ef7d63; /* hover and emphasis lift on dark, they don't darken */
+  --waste-wash: rgba(226, 107, 80, 0.12);
+  --on-accent: #1e1c1a; /* text placed on a filled accent */
+
+  /* Secondary action colour, for the rare filled button that is not the accent. */
+  --ink-hover: #ffffff;
+
+  /* -- severity: one hue at the top, then a grey ramp ------------------- */
+  --sev-high: #c6c0b4;
+  --sev-medium: #a8a296;
+  --sev-low: #948e83;
+
+  /* -- instrument fills ------------------------------------------------- */
+  --bar: #3a3733; /* the ordinary bar */
+  --bar-lead: #c6c0b4; /* the one bar that leads */
+
+  /* -- chart tones: a reading, not decoration. A bar is tinted by the worst
+   *    severity band inside it, so the shape of the chart also shows where the
+   *    urgent money is. Each clears 3:1 against the canvas as a graphical
+   *    object, and they stay distinguishable under the common colour-vision
+   *    deficiencies because they differ in lightness as well as hue. ------ */
+  --chart-critical: var(--waste);
+  --chart-high: #d8a24a;
+  --chart-medium: #7fa3c4;
+  --chart-low: #8f8a80;
+  --chart-neutral: var(--bar);
+
+  /* -- type: a serif for the voice, a grotesque for the interface, a mono
+   *    for every figure. Three families, each with one job. ------------- */
+  --font-display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --t-micro: 10px;
+  --t-tiny: 11px;
+  --t-small: 13px;
+  --t-body: 14px;
+  --t-lead: 17px;
+  --t-head: 21px;
+  --t-display: 30px;
+  --t-figure: 60px; /* the one number the product exists to show */
+
+  /* -- space: room to breathe. Sections are separated by 72px, not by a box. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 72px;
+
+  /* -- physicality: a chamfer, not a bubble ---------------------------- */
+  --radius: 3px;
+  --radius-pill: 999px;
+
+  /* -- motion: settled, decelerating, never bouncy ---------------------
+   * Two curves. Entrances decelerate out; exits accelerate away, because the
+   * user already understands the thing by the time it leaves. Press feedback is
+   * near-instant so the interface reads as having heard the click. --------- */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1); /* entrance */
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1); /* exit */
+
+  --dur-press: 90ms; /* press feedback */
+  --dur-fast: 130ms; /* hover, colour, border */
+  --dur: 200ms; /* entrances, small reveals */
+  --dur-exit: 140ms; /* roughly 70% of an entrance */
+  --dur-slow: 300ms; /* spatial changes, value settling */
+
+  --rail-w: 196px;
+  --measure: 66ch;
+}

@@ -1,0 +1,220 @@
+/* Reset, document defaults, and the typographic scale. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* The hidden attribute has to win.
+ *
+ * The user agent hides [hidden] with `display: none`, but any author rule that
+ * sets `display` on the same element overrides it, regardless of specificity.
+ * Without this, `element.hidden = true` silently does nothing for anything with
+ * a class that sets display (an overlay, a toast, a progress bar), leaving it on
+ * screen in a state that should be empty. */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: var(--t-body);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Desktop chrome: text selection and rubber-banding read as bugs here. */
+  user-select: none;
+  overscroll-behavior: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+figure {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---- typographic roles ------------------------------------------------- */
+
+/* The printed voice. Used sparingly so it keeps its weight: the masthead,
+ * the screen title, and the one balance figure that matters. */
+.t-display {
+  font-family: var(--font-display);
+  font-size: var(--t-display);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+}
+
+.t-head {
+  font-family: var(--font-display);
+  font-size: var(--t-head);
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: -0.008em;
+  color: var(--ink);
+}
+
+.t-lead {
+  font-family: var(--font-display);
+  font-size: var(--t-lead);
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.t-serif {
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+
+.t-body {
+  font-size: var(--t-body);
+  color: var(--ink-2);
+}
+
+.t-small {
+  font-size: var(--t-small);
+  color: var(--ink-2);
+}
+
+.t-meta {
+  font-size: var(--t-tiny);
+  color: var(--ink-4);
+}
+
+/* A stamped label: the ledger's field names. Mono, tracked, uppercase. */
+.t-stamp {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* Every number that sits in a column must be tabular so columns align. */
+.t-figure {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.01em;
+}
+
+.t-prose {
+  max-width: var(--measure);
+  line-height: 1.62;
+}
+
+.t-prose + .t-prose {
+  margin-top: var(--s3);
+}
+
+/* Colour roles for figures and states. Only the two that are actually used:
+ * colour never travels alone here, so a severity is always a mark and a word. */
+.is-waste {
+  color: var(--waste);
+}
+
+.is-muted {
+  color: var(--ink-4);
+}
+
+/* Motion preference.
+ *
+ * One switch for the whole interface. It uses 0.01ms rather than `none` so that
+ * animationend and transitionend still fire and anything waiting on them does
+ * not hang.
+ *
+ * The preference asks for less motion, not none. What it protects against is
+ * vestibular upset, so spatial movement goes; state that changes instantly (a
+ * hover colour, the focus ring, a spinner still turning) stays legible. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---- focus ------------------------------------------------------------- */
+
+/* One focus treatment for the whole product: offset ring, never invisible. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--waste);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+/* ---- scrollbars: thin, ruled, not floating ---------------------------- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--rule-strong);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--radius-pill);
+}
+
+/* ---- accessibility helpers -------------------------------------------- */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Text the user may legitimately want to copy (IDs, keys, paths). */
+.selectable {
+  user-select: text;
+  cursor: text;
+}

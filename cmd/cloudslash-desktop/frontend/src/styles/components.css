@@ -1,0 +1,1360 @@
+/* Component layer.
+ *
+ * A surface is bounded by space or by a single hairline, never by a box. There
+ * are no floating cards and no soft shadows; type and whitespace carry the
+ * hierarchy.
+ */
+
+/* ============================================================ shell ===== */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "masthead masthead"
+    "rail     work";
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ---- masthead: a letterhead, not a toolbar ---------------------------- */
+
+.masthead {
+  grid-area: masthead;
+  display: flex;
+  align-items: center;
+  gap: var(--s6);
+  padding: 0 var(--s7);
+  height: 64px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+}
+
+.masthead__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.masthead__mark {
+  display: block;
+  color: var(--ink);
+}
+
+.masthead__word {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.masthead__word em {
+  font-style: normal;
+  color: var(--waste);
+}
+
+/* Two facts, not five. The rest live on the page that owns them. */
+.masthead__facts {
+  display: flex;
+  align-items: center;
+  gap: var(--s5);
+  flex: 1;
+  min-width: 0;
+}
+
+.fact {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+
+.fact__k {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.fact__v {
+  font-family: var(--font-mono);
+  font-size: var(--t-small);
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.masthead__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s5);
+  flex: none;
+}
+
+/* ---- status: a quiet word with a mark, not a blinking badge ---------- */
+
+.lamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.lamp::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: var(--rule-strong);
+  border-radius: 50%;
+  flex: none;
+}
+
+.lamp--live::before {
+  background: var(--waste);
+  animation: breathe 2s var(--ease) infinite;
+}
+.lamp--done::before {
+  background: var(--ink-2);
+}
+.lamp--failed::before {
+  background: var(--waste);
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* ---- rail: a contents page -------------------------------------------- */
+
+.rail {
+  grid-area: rail;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--s7) 0 var(--s5);
+  background: var(--paper);
+  border-right: 1px solid var(--rule);
+}
+
+.rail__heading {
+  padding: 0 var(--s6) var(--s4);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.rail__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px var(--s6);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink-3);
+  font-size: var(--t-body);
+  transition: color var(--dur-fast) var(--ease);
+}
+
+.rail__item:hover {
+  color: var(--ink);
+}
+
+/* Active is carried by weight, colour and a single accent tick. */
+.rail__item[aria-current="page"] {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.rail__item[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 5px;
+  bottom: 5px;
+  width: 2px;
+  background: var(--waste);
+}
+
+.rail__num {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-4);
+  flex: none;
+}
+
+.rail__icon {
+  display: none; /* The numbers carry the index; five icons would be noise. */
+}
+
+.rail__item[aria-current="page"] .rail__num {
+  color: var(--waste);
+}
+
+.rail__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rail__count {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-4);
+  flex: none;
+}
+
+.rail__spacer {
+  flex: 1;
+  min-height: var(--s5);
+}
+
+.rail__imprint {
+  padding: var(--s5) var(--s6) 0;
+  margin: 0 var(--s6);
+  border-top: 1px solid var(--rule);
+  display: grid;
+  gap: 4px;
+}
+
+.rail__imprint span {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.04em;
+  color: var(--ink-4);
+  text-transform: uppercase;
+}
+
+.rail__imprint strong {
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+/* ---- work area -------------------------------------------------------- */
+
+.work {
+  grid-area: work;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  background: var(--surface);
+}
+
+.view {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.view__inner {
+  padding: var(--s8) var(--s7) 140px;
+  max-width: 1080px;
+}
+
+.view__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s4);
+  margin-bottom: var(--s3);
+}
+
+.view__title h1 {
+  font-family: var(--font-display);
+  font-size: var(--t-display);
+  font-weight: 500;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+  line-height: 1.05;
+}
+
+.view__lede {
+  max-width: 58ch;
+  font-size: var(--t-lead);
+  line-height: 1.5;
+  color: var(--ink-3);
+  margin-bottom: var(--s8);
+}
+
+/* ====================================================== balance band ==== */
+
+/* The running total. Always visible, stated once, at a size that matches how
+ * much the number matters. */
+.balance {
+  flex: none;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s8);
+  padding: var(--s5) var(--s7) var(--s4);
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+}
+
+.balance__cell {
+  min-width: 0;
+}
+
+.balance__cell--lead {
+  flex: none;
+}
+
+.balance__stats {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s7);
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 4px;
+}
+
+.balance__caption {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-bottom: 10px;
+}
+
+.balance__figure {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--t-figure);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 0.92;
+  color: var(--waste);
+}
+
+.balance__cell--lead .balance__figure {
+  color: var(--waste);
+}
+
+/* The accounting double rule under the total. Two hairlines: anyone who has
+ * read a statement knows exactly what it means. */
+.balance__total {
+  display: inline-block;
+  padding-bottom: 8px;
+  border-bottom: 3px double var(--waste);
+}
+
+.balance__figure--small {
+  font-family: var(--font-sans);
+  font-size: var(--t-head);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+/* A value that changed says so, once.
+ *
+ * Opacity, not movement: the number is the message, and this only draws the eye
+ * to it while a scan keeps restating the totals. */
+@keyframes value-change {
+  from {
+    opacity: 0.3;
+  }
+}
+
+.balance__figure--changed {
+  animation: value-change var(--dur-slow) var(--ease);
+}
+
+.balance__aside {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.03em;
+  color: var(--ink-3);
+}
+
+/* A caption that is also a link, so the count in the balance band can be the way
+ * into the rows it counts. The 6px above it moves from margin to padding, which
+ * leaves the layout identical while giving the control a 27px hit area. */
+.balance__aside--action {
+  margin-top: 0;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.balance__aside--action:hover:not([disabled]) {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.balance__aside--action[disabled] {
+  cursor: default;
+}
+
+/* Progress is drawn with transform, not width. Animating a layout property on a
+ * live scan makes the whole frame reflow for a 1.5px line. */
+.balance__progress {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 100%;
+  height: 1.5px;
+  background: var(--waste);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur) var(--ease);
+}
+
+/* ========================================================== sections ==== */
+
+/* A section is a stamped label, a title, and content. There is no border,
+ * because 72px of space already says "this is a new part of the page". */
+.panel {
+  margin-bottom: var(--s8);
+}
+
+.panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s5);
+  margin-bottom: var(--s5);
+}
+
+.panel__title {
+  font-family: var(--font-display);
+  font-size: var(--t-head);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+}
+
+.panel__note {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  white-space: nowrap;
+}
+
+.panel__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--s8);
+}
+
+.panel__grid--split {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+}
+
+.caption {
+  margin-top: var(--s5);
+  max-width: 56ch;
+  font-size: var(--t-small);
+  color: var(--ink-3);
+}
+
+/* ============================================================ ledger ==== */
+
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-body);
+}
+
+.ledger thead th {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  text-align: left;
+  padding: 0 12px 10px;
+  border-bottom: 1px solid var(--rule-strong);
+  white-space: nowrap;
+}
+
+.ledger thead th:first-child {
+  padding-left: 0;
+}
+
+.ledger tbody td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-2);
+  vertical-align: baseline;
+}
+
+.ledger tbody td:first-child {
+  padding-left: 0;
+}
+
+/* Hover and selection lift the row toward the light, rather than dropping it into
+ * a black block. On a dark canvas a sunken fill reads as a hole punched in the
+ * table, and next to a ruled border it reads as a hole with a stray edge. */
+.ledger tbody tr {
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.ledger tbody tr:hover {
+  background: var(--surface);
+}
+
+.ledger tbody tr[aria-selected="true"] {
+  background: var(--surface);
+}
+
+.ledger tbody tr[aria-selected="true"] td {
+  color: var(--ink);
+}
+
+/* Selection is also carried by a mark in the margin, so it does not depend on
+ * the fill alone, and by a word in the inspector. */
+.ledger tbody tr[aria-selected="true"] td:first-child {
+  box-shadow: inset 2px 0 0 var(--waste);
+}
+
+.ledger--interactive tbody tr {
+  cursor: pointer;
+}
+
+.ledger .num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ledger .num--lead {
+  color: var(--ink);
+}
+
+.ledger .id {
+  font-family: var(--font-mono);
+  font-size: var(--t-small);
+  color: var(--ink);
+  word-break: break-all;
+}
+
+.ledger .sub {
+  display: block;
+  font-size: var(--t-small);
+  color: var(--ink-4);
+  margin-top: 3px;
+}
+
+/* ---- severity: a mark and a word -------------------------------------- */
+
+.sev {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-sans);
+  font-size: var(--t-small);
+  white-space: nowrap;
+}
+
+.sev::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.sev--critical {
+  color: var(--waste);
+}
+.sev--high {
+  color: var(--sev-high);
+}
+.sev--medium {
+  color: var(--sev-medium);
+}
+.sev--low {
+  color: var(--sev-low);
+}
+
+/* ---- dotted leaders ---------------------------------------------------- */
+
+/* label · · · · value. The one piece of ornament in the system, and it is
+ * borrowed from a table of contents rather than from a UI kit. */
+.leader {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 9px 0;
+  font-size: var(--t-body);
+}
+
+.leader + .leader {
+  border-top: 1px solid var(--rule);
+}
+
+.leader__k {
+  color: var(--ink-3);
+  flex: none;
+}
+
+.leader__dots {
+  flex: 1;
+  min-width: 16px;
+  border-bottom: 1px dotted var(--rule-strong);
+  transform: translateY(-4px);
+}
+
+.leader__v {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  text-align: right;
+  flex: none;
+  max-width: 60%;
+  word-break: break-word;
+}
+
+.section-note {
+  display: block;
+  margin-bottom: var(--s2);
+}
+
+/* ======================================================== instruments === */
+
+/* A ranked bar chart, not a table with rules.
+ *
+ * The bar is the row: a label, a fill rising from a shared baseline, and the
+ * figure at the end. There is no track behind the bar and no rule between rows,
+ * because a dozen hairlines stacked up stop reading as a chart and start reading
+ * as a spreadsheet.
+ *
+ * The rows carry vertical padding rather than a rule, which is also what keeps
+ * the hit area of a clickable bar above 24px. */
+.bars {
+  display: grid;
+  gap: var(--s2);
+}
+
+.bar {
+  display: grid;
+  grid-template-columns: minmax(96px, 172px) minmax(40px, 1fr) 104px;
+  align-items: center;
+  gap: var(--s4);
+  padding: 6px 0;
+  border: 0;
+}
+
+.bar__label {
+  font-size: var(--t-body);
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar__track {
+  display: flex;
+  align-items: center;
+  height: 16px;
+}
+
+/* No entrance animation. These marks are restated every time a scan reports, and
+ * a bar chart that performs on each poll is a bar chart that flickers. */
+.bar__fill {
+  height: 100%;
+  background: var(--chart-neutral);
+}
+
+/* The fill carries the severity reading. */
+.bar__fill--critical {
+  background: var(--chart-critical);
+}
+.bar__fill--high {
+  background: var(--chart-high);
+}
+.bar__fill--medium {
+  background: var(--chart-medium);
+}
+.bar__fill--low {
+  background: var(--chart-low);
+}
+.bar__fill--neutral {
+  background: var(--chart-neutral);
+}
+
+/* A bar that opens the register. It is a real button, so it behaves like one. */
+.bar--action {
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding-left: var(--s2);
+  padding-right: var(--s2);
+  margin-left: calc(var(--s2) * -1);
+  margin-right: calc(var(--s2) * -1);
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.bar--action:hover,
+.bar--action:focus-visible {
+  background: var(--surface);
+}
+
+.bar--action:hover .bar__label {
+  color: var(--ink);
+}
+
+.bar--action:focus-visible {
+  outline: 2px solid var(--waste);
+  outline-offset: -2px;
+}
+
+.bar__value {
+  font-family: var(--font-mono);
+  font-size: var(--t-small);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.bar__share {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  color: var(--ink-4);
+  margin-left: var(--s2);
+}
+
+/* ---- risk ruler -------------------------------------------------------- */
+
+.ruler {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 14px;
+}
+
+.ruler__tick {
+  width: 4px;
+  height: 55%;
+  background: var(--rule-strong);
+}
+
+.ruler__tick--on {
+  height: 100%;
+  background: var(--ink-2);
+}
+
+.ruler__tick--on.ruler__tick--critical {
+  background: var(--waste);
+}
+
+/* ---- chart ------------------------------------------------------------- */
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.chart text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--ink-4);
+}
+
+.chart .chart__bar {
+  fill: var(--chart-neutral);
+}
+
+.chart .chart__bar--critical {
+  fill: var(--chart-critical);
+}
+.chart .chart__bar--high {
+  fill: var(--chart-high);
+}
+.chart .chart__bar--medium {
+  fill: var(--chart-medium);
+}
+.chart .chart__bar--low {
+  fill: var(--chart-low);
+}
+.chart .chart__bar--neutral {
+  fill: var(--chart-neutral);
+}
+
+.chart .chart__bar--action {
+  cursor: pointer;
+}
+
+.chart .chart__bar--action:hover {
+  fill: var(--ink);
+}
+
+.chart .chart__bar--action:focus-visible {
+  outline: 2px solid var(--waste);
+  outline-offset: 2px;
+}
+
+.chart .chart__note {
+  fill: var(--ink-4);
+}
+
+/* ---- the hover card ---------------------------------------------------- */
+
+/* One tooltip for the whole product, positioned by the chart that raised it, so
+   it can never be clipped by a scrolling panel. */
+.tip {
+  position: fixed;
+  z-index: 80;
+  display: grid;
+  gap: 3px;
+  min-width: 168px;
+  max-width: 280px;
+  padding: 10px var(--s3);
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 40px -20px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+.tip__title {
+  font-size: var(--t-small);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.tip__value {
+  font-size: var(--t-lead);
+  color: var(--waste);
+}
+
+.tip__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s4);
+  font-size: var(--t-tiny);
+  color: var(--ink-3);
+}
+
+.tip__v {
+  color: var(--ink-2);
+}
+
+.chart .chart__axis {
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+}
+
+/* =========================================================== controls === */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--t-small);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease), transform var(--dur-press) var(--ease);
+}
+
+.btn:hover {
+  border-color: var(--ink);
+}
+
+/* Press feedback: the control acknowledges the click in under 100ms. */
+.btn:active {
+  background: var(--sunk);
+  transform: scale(0.98);
+}
+
+.btn[disabled] {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn__icon {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+
+/* Primary is ink: on a dark canvas that means a light, quiet button. The accent
+ * is reserved for money that is actually being lost, never for an action. */
+.btn--primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.btn--primary:hover {
+  background: var(--ink-hover);
+  border-color: var(--ink-hover);
+}
+
+.btn--danger {
+  background: var(--waste);
+  border-color: var(--waste);
+  color: var(--on-accent);
+}
+
+.btn--danger:hover {
+  background: var(--waste-deep);
+  border-color: var(--waste-deep);
+}
+
+.btn--quiet {
+  border-color: transparent;
+  padding: 7px 8px;
+  color: var(--ink-3);
+}
+
+.btn--quiet:hover {
+  border-color: transparent;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.btn--sm {
+  padding: 6px 11px;
+  font-size: var(--t-tiny);
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.row-actions {
+  display: flex;
+  gap: var(--s3);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ---- segmented control ------------------------------------------------- */
+
+.seg {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.seg__opt {
+  padding: 5px 11px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--t-small);
+  color: var(--ink-3);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.seg__opt:hover {
+  color: var(--ink);
+  background: var(--sunk);
+}
+
+.seg__opt[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* ---- fields: a label above, always visible ---------------------------- */
+
+.field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.field__label {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.field__hint {
+  font-size: var(--t-small);
+  color: var(--ink-4);
+  max-width: 56ch;
+  line-height: 1.5;
+}
+
+.input {
+  width: 100%;
+  max-width: 270px;
+  padding: 9px 12px;
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: var(--t-small);
+  color: var(--ink);
+  transition: border-color var(--dur-fast) var(--ease);
+}
+
+.input::placeholder {
+  color: var(--ink-4);
+  font-family: var(--font-sans);
+}
+
+.input:hover {
+  border-color: var(--ink-3);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--waste);
+  outline-offset: 2px;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 200px;
+  max-width: 340px;
+  padding: 0 12px;
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+}
+
+.search:focus-within {
+  border-color: var(--ink);
+  outline: 2px solid var(--waste);
+  outline-offset: 2px;
+}
+
+.search__icon {
+  color: var(--ink-4);
+  flex: none;
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--t-small);
+  color: var(--ink);
+}
+
+.search input:focus {
+  outline: none;
+}
+
+/* ---- switch ------------------------------------------------------------ */
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch__track {
+  width: 36px;
+  height: 20px;
+  flex: none;
+  background: var(--sunk);
+  border: 1px solid var(--rule-strong);
+  border-radius: 10px;
+  padding: 2px;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.switch__knob {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  transition: transform var(--dur) var(--ease), background var(--dur-fast) var(--ease);
+}
+
+.switch input:checked + .switch__track {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.switch input:checked + .switch__track .switch__knob {
+  transform: translateX(16px);
+  background: var(--paper);
+}
+
+.switch input:focus-visible + .switch__track {
+  outline: 2px solid var(--waste);
+  outline-offset: 2px;
+}
+
+.switch__text {
+  font-size: var(--t-small);
+  color: var(--ink-2);
+}
+
+/* ---- tags -------------------------------------------------------------- */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.tag--pro {
+  border-color: var(--waste);
+  color: var(--waste);
+}
+
+.tag--safe {
+  border-color: var(--rule-strong);
+  color: var(--ink-2);
+}
+
+/* An alarm tag. Reserved for the one condition that invalidates everything on
+ * screen: the engine never answered and these numbers are synthetic. It is
+ * clickable, so it carries a real hit area rather than looking like a label. */
+.tag--alarm {
+  border-color: var(--waste);
+  color: var(--waste);
+  background: var(--waste-wash);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  letter-spacing: 0.04em;
+  padding: 5px 10px;
+}
+
+.tag--alarm:hover {
+  background: var(--waste);
+  color: var(--on-accent);
+}
+
+/* The one rubber stamp in the product. */
+.stamp {
+  display: inline-block;
+  padding: 3px 9px;
+  border: 1.5px solid var(--waste);
+  color: var(--waste);
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transform: rotate(-3deg);
+}
+
+/* ============================================================= notes ==== */
+
+/* A rule in the margin, not a coloured box. */
+.note {
+  display: grid;
+  grid-template-columns: 2px minmax(0, 1fr) auto;
+  gap: var(--s5);
+  align-items: start;
+  padding: var(--s5) 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: var(--s7);
+  font-size: var(--t-body);
+}
+
+.note::before {
+  content: "";
+  align-self: stretch;
+  background: var(--ink-4);
+}
+
+.note__body {
+  display: grid;
+  gap: 5px;
+}
+
+.note__title {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.note--info::before {
+  background: var(--ink-2);
+}
+.note--warn::before,
+.note--err::before {
+  background: var(--waste);
+}
+.note--safe::before {
+  background: var(--ink-2);
+}
+
+/* ---- empty and loading ------------------------------------------------- */
+
+.empty {
+  display: grid;
+  gap: var(--s4);
+  justify-items: start;
+  padding: var(--s8) 0;
+  max-width: 56ch;
+}
+
+.empty__title {
+  font-family: var(--font-display);
+  font-size: var(--t-head);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.empty__body {
+  font-size: var(--t-body);
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+
+.skeleton {
+  display: block;
+  height: 9px;
+  border-radius: var(--radius);
+  background: linear-gradient(90deg, var(--sunk), var(--rule), var(--sunk));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ---- spec rows --------------------------------------------------------- */
+
+.kv {
+  display: grid;
+}
+
+.kv__row {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr);
+  gap: var(--s4);
+  padding: 9px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--t-small);
+}
+
+.kv__row:last-child {
+  border-bottom: 0;
+}
+
+.kv__k {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  padding-top: 3px;
+}
+
+.kv__v {
+  color: var(--ink-2);
+  word-break: break-word;
+  min-width: 0;
+}
+
+/* ============================================================= layout === */
+
+.stack {
+  display: grid;
+  gap: var(--s4);
+}
+
+.stack--wide {
+  display: grid;
+  gap: var(--s6);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  flex-wrap: wrap;
+}
+
+.row--between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  flex-wrap: wrap;
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}

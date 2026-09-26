@@ -1,0 +1,10 @@
+node_modules/
+
+# Local overrides. The build reads these if present.
+.env.local
+.env.*.local
+
+# Built bundle. The Go build embeds this directory, so the folder itself is
+# tracked via .gitkeep while its contents are generated.
+dist/*
+!dist/.gitkeep

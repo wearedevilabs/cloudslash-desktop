@@ -886,7 +886,18 @@ func fileURL(path string) string {
 	if err != nil {
 		abs = path
 	}
-	return (&url.URL{Scheme: "file", Path: filepath.ToSlash(abs)}).String()
+	return fileURLFor(abs)
+}
+
+// fileURLFor builds a file URL from an absolute path. A Windows drive letter is
+// not a leading slash, so one is added: without it "file:C:/Users/x" reads the
+// drive as a host and the handler refuses it.
+func fileURLFor(abs string) string {
+	slashed := filepath.ToSlash(abs)
+	if !strings.HasPrefix(slashed, "/") {
+		slashed = "/" + slashed
+	}
+	return (&url.URL{Scheme: "file", Path: slashed}).String()
 }
 
 // allowedHosts is the set of domains the app will hand to the browser. Findings

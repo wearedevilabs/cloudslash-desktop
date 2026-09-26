@@ -66,7 +66,19 @@ func (d *Desktop) RunRemediation(script string) RemediationResult {
 
 	// Run from the output directory, because the scripts address their sibling
 	// files by relative path.
-	cmd := exec.CommandContext(ctx, "sh", name)
+	//
+	// The generated scripts are POSIX shell, so a machine without one cannot run
+	// them. Saying so is better than a failed exec with no explanation, and this
+	// is the case on Windows.
+	shell, lookErr := exec.LookPath("sh")
+	if lookErr != nil {
+		return RemediationResult{
+			Script: name,
+			Error:  "these scripts are POSIX shell scripts and this machine has no sh to run them with. Run the file by hand, or use a POSIX host",
+		}
+	}
+
+	cmd := exec.CommandContext(ctx, shell, name)
 	cmd.Dir = outputDir
 
 	started := time.Now()

@@ -130,6 +130,19 @@ jobs:
           cache: npm
           cache-dependency-path: cmd/cloudslash-desktop/frontend/package-lock.json
 
+      # Optional: gives the .exe its own icon in Explorer. The window and taskbar
+      # icon come from the embedded PNG either way.
+      - name: Windows icon resource
+        if: matrix.kind == 'windows'
+        continue-on-error: true
+        shell: bash
+        run: |
+          go install github.com/akavel/rsrc@latest
+          RSRC="$(go env GOPATH)/bin/rsrc.exe"
+          [ -x "$RSRC" ] || RSRC="$(go env GOPATH)/bin/rsrc"
+          "$RSRC" -ico cmd/cloudslash-desktop/assets/appicon.ico \
+            -o cmd/cloudslash-desktop/rsrc_windows_amd64.syso
+
       # the binary embeds the bundle, so build it first
       - name: Bundle the interface
         shell: bash

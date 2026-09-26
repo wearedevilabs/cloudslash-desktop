@@ -73,7 +73,7 @@ export function createAccountView(): View {
       planActions.append(
         button({ label: "Check again", icon: "refresh", variant: "quiet", onClick: () => void refreshPlan() }),
       );
-    } else {
+    } else if (plan.packages.length) {
       planActions.append(
         button({
           label: "Support CloudSlash",
@@ -90,11 +90,26 @@ export function createAccountView(): View {
           onClick: () => void refreshPlan(),
         }),
       );
+    } else {
+      // Configured, but nothing published: offering support would open a dialog
+      // with nothing in it, so the only useful action is to look again.
+      planActions.append(
+        button({ label: "Refresh", icon: "refresh", variant: "quiet", onClick: () => void refreshPlan() }),
+      );
     }
+
+    // One section, one heading. What the contribution currently is and what is
+    // on offer belong together; two panels under the same title read as a bug.
+    const planSummary = !plan.configured
+      ? "Payments, receipts and cancellations all happen on our payment provider's own checkout, so this app never sees a card and never stores one."
+      : plan.packages.length
+        ? `From ${plan.packages[0].price || "—"} ${plan.packages[0].period}. Nothing is unlocked by this, because nothing needs unlocking. Cancel whenever you like without losing a feature.`
+        : "No support options are published for this project yet, so there is nothing to offer here. The rest of the app is unaffected.";
 
     sections.push(
       panel({
         title: "CloudSlash Support",
+        note: plan.configured && plan.packages.length ? `${num(plan.packages.length)} available` : undefined,
         body: [
           planFacts.length ? h("div", { class: "kv" }, ...planFacts) : null,
           plan.billingIssue
@@ -102,6 +117,7 @@ export function createAccountView(): View {
             : null,
           !plan.configured ? note("warn", "Billing is not configured in this build", keyProblemMessage(plan.keyProblem)) : null,
           plan.error ? note("warn", "The plan could not be confirmed just now", plan.error) : null,
+          h("p", { class: "t-small" }, planSummary),
           planActions,
         ],
       }),
@@ -141,57 +157,6 @@ export function createAccountView(): View {
         ),
       }),
     );
-
-    /* -- plans --------------------------------------------------------- */
-    const planSection = h("section", { class: "panel", id: "plans" });
-
-    if (!plan.configured) {
-      // Kept short, because the dialog above owns the full explanation.
-      planSection.append(
-        panel({
-          title: "CloudSlash Support",
-          body: h(
-            "p",
-            { class: "t-small" },
-            "Payments, receipts and cancellations all happen on our payment provider's own checkout, so this app never sees a card and never stores one. Open the dialog to see where this build stands.",
-          ),
-        }),
-      );
-    } else if (plan.packages.length) {
-      const shortest = plan.packages[0];
-      planSection.append(
-        panel({
-          title: "CloudSlash Support",
-          note: `${num(plan.packages.length)} available`,
-          body: [
-            h(
-              "p",
-              { class: "t-small" },
-              `From ${shortest.price || "—"} ${shortest.period}. Nothing is unlocked by this, because nothing needs unlocking. Choose the term that suits you, and cancel whenever you like without losing a single feature.`,
-            ),
-            button({
-              label: plan.pro ? "Change your support" : "Support CloudSlash",
-              icon: "arrow",
-              variant: "primary",
-              onClick: () => openPaywall("Supporting CloudSlash"),
-            }),
-          ],
-        }),
-      );
-    } else {
-      planSection.append(
-        panel({
-          title: "CloudSlash Support",
-          note: "none published",
-          body: h(
-            "p",
-            { class: "t-small" },
-            "No support options are published for this project yet, so there is nothing to offer here. The rest of the app is unaffected.",
-          ),
-        }),
-      );
-    }
-    sections.push(planSection);
 
     /* -- about ---------------------------------------------------------- */
     sections.push(

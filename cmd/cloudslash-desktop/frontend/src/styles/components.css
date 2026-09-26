@@ -1019,6 +1019,12 @@
   flex-wrap: wrap;
 }
 
+/* The supporter state, stated rather than implied. */
+.is-supporter {
+  color: var(--waste);
+  font-size: var(--t-body);
+}
+
 /* ---- segmented control ------------------------------------------------- */
 
 .seg {

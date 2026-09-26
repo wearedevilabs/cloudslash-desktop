@@ -157,6 +157,26 @@ export function createAccountView(): View {
         note: hasPlans ? `${num(plan.packages.length)} available` : undefined,
         body: [
           planFacts.length ? h("div", { class: "kv" }, ...planFacts) : null,
+          // Say plainly whether this install is supporting, since it is otherwise
+          // only inferable from which buttons appear.
+          plan.pro
+            ? h(
+                "p",
+                { class: "is-supporter" },
+                plan.willRenew
+                  ? "This install is supporting CloudSlash, and it renews automatically."
+                  : "This install is supporting CloudSlash.",
+              )
+            : null,
+          // Where to cancel has to be stated even when there is no link to give:
+          // Paddle is the merchant of record, so its receipt carries the way out.
+          plan.pro && !managementTarget()
+            ? note(
+                "info",
+                "Cancelling",
+                "Your subscription is managed by our payment provider, which emails a receipt for every payment. That email carries the link to change or cancel, and cancelling changes nothing about what you can use.",
+              )
+            : null,
           plan.billingIssue
             ? note("warn", "The payment method needs attention", "The contribution is still active for now, but the card on file will need updating. Use Manage or cancel.")
             : null,

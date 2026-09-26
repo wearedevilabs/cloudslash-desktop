@@ -58,10 +58,11 @@ type Desktop struct {
 }
 
 const (
-	statusReady    = "ready"
-	statusScanning = "scanning"
-	statusComplete = "complete"
-	statusFailed   = "failed"
+	statusReady     = "ready"
+	statusScanning  = "scanning"
+	statusComplete  = "complete"
+	statusCancelled = "cancelled"
+	statusFailed    = "failed"
 )
 
 // ---------------------------------------------------------------- DTOs
@@ -521,9 +522,26 @@ func rfc3339(t time.Time) string {
 	return t.UTC().Format(time.RFC3339)
 }
 
+// AwsConfigured reports whether anything on this machine can supply credentials:
+// a profile in the shared config, or credentials in the environment.
+func AwsConfigured() bool {
+	_, err := engineaws.ListProfiles()
+	return err == nil
+}
+
 // StartScan builds the engine configuration from the saved preferences, starts a
 // run in the background, and returns immediately. Progress is read via Snapshot.
 func (d *Desktop) StartScan(region string, demo bool) error {
+	// Reading nothing would otherwise spend its time hunting for credentials that
+	// do not exist, leaving the window on "scanning" with no way forward. Refuse
+	// before any state changes, and say what to do about it.
+	if !demo && !AwsConfigured() {
+		return fmt.Errorf(
+			"no AWS configuration was found on this machine, so there is nothing to read. " +
+				"Run `aws configure` to add a profile, or switch on demo mode to see the interface working on synthetic data",
+		)
+	}
+
 	d.mu.Lock()
 	if d.status == statusScanning {
 		d.mu.Unlock()
@@ -602,14 +620,28 @@ func (d *Desktop) StartScan(region string, demo bool) error {
 }
 
 // CancelScan stops a run in progress.
+//
+// The engine has phases that run on their own context — the Terraform state
+// read, the CloudWatch log sweep and the ECR sweep all use context.Background()
+// — so cancelling alone cannot be relied on to bring the goroutine back. The
+// window therefore stops waiting on it: the status becomes cancelled, the
+// session is dropped, and any findings it had are discarded. The goroutine
+// finishes on its own and its result is ignored.
 func (d *Desktop) CancelScan() error {
 	d.mu.Lock()
 	cancel := d.cancel
-	d.mu.Unlock()
-
+	d.cancel = nil
 	if cancel == nil {
+		d.mu.Unlock()
 		return fmt.Errorf("no scan is running")
 	}
+
+	d.status = statusCancelled
+	d.session = nil
+	d.errMsg = ""
+	d.finishedAt = time.Now()
+	d.mu.Unlock()
+
 	cancel()
 	return nil
 }

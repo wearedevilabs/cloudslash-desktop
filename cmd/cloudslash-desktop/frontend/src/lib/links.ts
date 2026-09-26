@@ -15,17 +15,24 @@
 
 const SITE = "https://cloudslash.dev";
 
+/**
+ * cloudslash.dev currently answers with the same page for every path, so a deep
+ * link lands on the homepage and reads as broken. Everything points at the root
+ * until the site has real routes; this is still the single edit point.
+ */
+const PAGE = SITE;
+
 export const LINKS = {
   site: `${SITE}/`,
-  pricing: `${SITE}/pricing`,
-  docs: `${SITE}/docs`,
-  support: `${SITE}/support`,
-  privacy: `${SITE}/privacy`,
-  terms: `${SITE}/terms`,
-  account: `${SITE}/account`,
-  changelog: `${SITE}/changelog`,
+  pricing: PAGE,
+  docs: PAGE,
+  support: PAGE,
+  privacy: PAGE,
+  terms: PAGE,
+  account: PAGE,
+  changelog: PAGE,
   /** Where "report a false positive" goes, pre-filled by the app where possible. */
-  feedback: `${SITE}/feedback`,
+  feedback: PAGE,
 } as const;
 
 /** Hosts the app is willing to hand to the operating system. */

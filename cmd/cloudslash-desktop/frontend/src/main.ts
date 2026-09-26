@@ -17,7 +17,6 @@ import "./styles/views.css";
 import { h } from "./lib/dom";
 import { boot, state, subscribe, type ScreenID } from "./lib/state";
 import { createBalance, createMasthead, createRail, createToast, screenIndex, screenLabel } from "./ui/shell";
-import { createPaywall } from "./ui/paywall";
 import { dismissTip } from "./ui/charts";
 import type { View } from "./ui/contracts";
 import { createStatementView } from "./views/statement";
@@ -43,7 +42,6 @@ const masthead = createMasthead();
 const rail = createRail();
 const balance = createBalance();
 const footer = createToast();
-const paywall = createPaywall();
 
 const work = h("div", { class: "work" });
 const shell = h("div", { class: "shell" }, masthead.el, rail.el, work);
@@ -56,7 +54,7 @@ const bootNote = h(
 );
 
 work.append(bootNote);
-root.append(shell, paywall.el, footer.el);
+root.append(shell, footer.el);
 
 /** Views are created on first visit and then kept, so scroll and selection survive. */
 const views = new Map<ScreenID, View>();
@@ -80,7 +78,6 @@ function render(): void {
   rail.update();
   balance.update();
   footer.update();
-  paywall.update();
 
   const view = activeView();
   if (view.el.parentElement !== work) {

@@ -1,6 +1,7 @@
 import { h } from "../lib/dom";
-import { openExternal, openPaywall, refreshPlan, state } from "../lib/state";
+import { openExternal, purchaseSelectedPlan, refreshPlan, selectPlanPackage, selectedPlanId, state } from "../lib/state";
 import { environmentLabel, keyProblemMessage, managementTarget } from "../lib/billing";
+import { REVENUECAT } from "../config/revenuecat";
 import { num } from "../lib/format";
 import { button, leaderRow, note, panel } from "../ui/bits";
 import { icon } from "../ui/icons";
@@ -18,6 +19,47 @@ export function createAccountView(): View {
   const el = h("div", { class: "view" });
   const inner = h("div", { class: "view__inner" });
   el.append(inner);
+
+  /**
+   * The plans, on the page rather than behind a button. The radio group is named
+   * apart from the dialog's so the two cannot fight over one selection.
+   */
+  function planChooser(): Node {
+    const selected = selectedPlanId();
+    const group = h("div", { class: "plans plans--inline", role: "radiogroup", "aria-label": "Choose a support plan" });
+
+    for (const pkg of state.plan.packages) {
+      const input = h("input", {
+        type: "radio",
+        name: "account-plan",
+        id: `account-plan-${pkg.id}`,
+        checked: pkg.id === selected,
+        onchange: () => selectPlanPackage(pkg.id),
+      });
+
+      group.append(
+        h(
+          "label",
+          { class: `plan${pkg.id === selected ? " plan--on" : ""}`, for: `account-plan-${pkg.id}` },
+          input,
+          h(
+            "span",
+            { class: "plan__text" },
+            h("span", { class: "plan__title" }, pkg.title),
+            pkg.description ? h("span", { class: "plan__note" }, pkg.description) : null,
+          ),
+          h(
+            "span",
+            { class: "plan__price" },
+            h("span", { class: "t-figure plan__amount" }, pkg.price || "—"),
+            h("span", { class: "plan__period" }, pkg.period),
+          ),
+        ),
+      );
+    }
+
+    return group;
+  }
 
   function update(): void {
     const { plan, profile } = state;
@@ -47,20 +89,18 @@ export function createAccountView(): View {
       );
     }
 
-    const planActions = h("div", { class: "row-actions" });
+    const planActions = h("div", { class: "row-actions row-actions--after" });
 
     if (plan.loading || plan.checking) {
       planActions.append(h("span", { class: "t-small is-muted" }, plan.checking ? "Checking your plan…" : "Loading…"));
     } else if (!plan.configured) {
-      // One support surface, always reachable. The dialog is where the billing
-      // situation is explained, so this goes there rather than dead-ending on
-      // the website.
+      // Nothing can be listed, so the only honest action is the hosted page.
       planActions.append(
         button({
           label: "Support CloudSlash",
-          icon: "arrow",
+          icon: "external",
           variant: "primary",
-          onClick: () => openPaywall("Supporting CloudSlash"),
+          onClick: () => void openExternal(REVENUECAT.supportUrl),
         }),
       );
     } else if (plan.pro) {
@@ -74,12 +114,15 @@ export function createAccountView(): View {
         button({ label: "Check again", icon: "refresh", variant: "quiet", onClick: () => void refreshPlan() }),
       );
     } else if (plan.packages.length) {
+      // The plans are already on screen, so this buys the chosen one rather than
+      // opening a second place that shows the same thing.
       planActions.append(
         button({
-          label: "Support CloudSlash",
-          icon: "arrow",
+          label: state.plan.purchasing ? "Opening checkout…" : "Support CloudSlash",
+          icon: state.plan.purchasing ? undefined : "arrow",
           variant: "primary",
-          onClick: () => openPaywall("Supporting CloudSlash"),
+          disabled: state.plan.purchasing,
+          onClick: () => void purchaseSelectedPlan(),
         }),
       );
       planActions.append(
@@ -91,8 +134,8 @@ export function createAccountView(): View {
         }),
       );
     } else {
-      // Configured, but nothing published: offering support would open a dialog
-      // with nothing in it, so the only useful action is to look again.
+      // Configured, but nothing published: there is nothing to buy, so the only
+      // useful action is to look again.
       planActions.append(
         button({ label: "Refresh", icon: "refresh", variant: "quiet", onClick: () => void refreshPlan() }),
       );
@@ -100,16 +143,18 @@ export function createAccountView(): View {
 
     // One section, one heading. What the contribution currently is and what is
     // on offer belong together; two panels under the same title read as a bug.
+    const hasPlans = plan.configured && plan.packages.length > 0;
+
     const planSummary = !plan.configured
       ? "Payments, receipts and cancellations all happen on our payment provider's own checkout, so this app never sees a card and never stores one."
-      : plan.packages.length
-        ? `From ${plan.packages[0].price || "—"} ${plan.packages[0].period}. Nothing is unlocked by this, because nothing needs unlocking. Cancel whenever you like without losing a feature.`
+      : hasPlans
+        ? "Nothing is unlocked by this, because nothing needs unlocking. Cancel whenever you like without losing a feature."
         : "No support options are published for this project yet, so there is nothing to offer here. The rest of the app is unaffected.";
 
     sections.push(
       panel({
         title: "CloudSlash Support",
-        note: plan.configured && plan.packages.length ? `${num(plan.packages.length)} available` : undefined,
+        note: hasPlans ? `${num(plan.packages.length)} available` : undefined,
         body: [
           planFacts.length ? h("div", { class: "kv" }, ...planFacts) : null,
           plan.billingIssue
@@ -117,6 +162,7 @@ export function createAccountView(): View {
             : null,
           !plan.configured ? note("warn", "Billing is not configured in this build", keyProblemMessage(plan.keyProblem)) : null,
           plan.error ? note("warn", "The plan could not be confirmed just now", plan.error) : null,
+          hasPlans ? planChooser() : null,
           h("p", { class: "t-small" }, planSummary),
           planActions,
         ],

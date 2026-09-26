@@ -677,6 +677,11 @@
   display: grid;
 }
 
+/* Inline on the Account screen, where it needs air above and below. */
+.plans--inline {
+  margin: var(--s5) 0;
+}
+
 .plan {
   display: flex;
   align-items: center;

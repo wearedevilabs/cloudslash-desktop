@@ -974,6 +974,12 @@
   align-items: center;
 }
 
+/* An action row that follows body copy needs its own separation, since the
+   paragraph above it carries no bottom margin. */
+.row-actions--after {
+  margin-top: var(--s5);
+}
+
 /* ---- segmented control ------------------------------------------------- */
 
 .seg {

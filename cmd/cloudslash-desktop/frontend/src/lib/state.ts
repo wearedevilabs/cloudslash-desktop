@@ -1,16 +1,9 @@
 import { api, initBackend, type Backend } from "./bridge";
 import { SEVERITY_FLOOR, friendlyType, severity, type Severity } from "./format";
-import { initialPlan, initPlan, type PlanState } from "./billing";
+import { initialPlan, initPlan, purchasePlan, type PlanState } from "./billing";
 import { emptySnapshot, defaultPrefs, type Artifact, type AwsEnvironment, type AwsIdentity, type ExportSpec, type Finding, type Prefs, type Profile, type RemediationResult, type Snapshot, type Verification, type VerificationStatus } from "./types";
 
 export type ScreenID = "statement" | "register" | "topology" | "artifacts" | "account" | "settings";
-
-/** The paywall is modal state, kept here so it re-renders through one path. */
-export interface PaywallState {
-  open: boolean;
-  reason: string;
-  selected: string | null;
-}
 
 export interface Filters {
   query: string;
@@ -46,7 +39,8 @@ export interface AppState {
   exporting: string | null;
   toast: Toast | null;
   plan: PlanState;
-  paywall: PaywallState;
+  /** The support plan chosen on the Account screen. */
+  selectedPlan: string | null;
   /** Availability of the optional server-side check. Carries no key material. */
   verificationStatus: VerificationStatus | null;
   /** The last authoritative answer, when one has been asked for. */
@@ -86,7 +80,7 @@ const initial: AppState = {
   exporting: null,
   toast: null,
   plan: initialPlan(),
-  paywall: { open: false, reason: "", selected: null },
+  selectedPlan: null,
   verificationStatus: null,
   verification: null,
   verifying: false,
@@ -135,19 +129,49 @@ export function setScreen(screen: ScreenID): void {
   if (state.screen !== screen) set({ screen });
 }
 
-/* ------------------------------------------------------------- paywall */
-
-/** Open the paywall, saying which capability was asked for and why it is gated. */
-export function openPaywall(reason: string): void {
-  set({ paywall: { open: true, reason, selected: null } });
-}
-
-export function closePaywall(): void {
-  set({ paywall: { ...state.paywall, open: false } });
-}
+/* ------------------------------------------------------------- support */
 
 export function selectPlanPackage(id: string): void {
-  set({ paywall: { ...state.paywall, selected: id } });
+  set({ selectedPlan: id });
+}
+
+/** The plan the operator has chosen, defaulting to the first on offer. */
+export function selectedPlanId(): string | null {
+  if (state.selectedPlan && state.plan.packages.some((p) => p.id === state.selectedPlan)) {
+    return state.selectedPlan;
+  }
+  return state.plan.packages[0]?.id ?? null;
+}
+
+/**
+ * Buy the chosen plan and report what happened. Shared by the Account screen and
+ * the support dialog, so the two cannot drift apart.
+ */
+export async function purchaseSelectedPlan(): Promise<void> {
+  const id = selectedPlanId();
+  if (!id) return;
+
+  const outcome = await purchasePlan(id);
+  switch (outcome.kind) {
+    case "purchased":
+      toast("success", "Thank you", "Your support is recorded against this install.");
+      await refreshPlan();
+      break;
+    case "cancelled":
+      // Backing out of a checkout is a decision, not a failure.
+      break;
+    case "pending":
+      toast("info", "Payment is pending", outcome.message ?? "It will clear shortly.");
+      break;
+    case "handoff":
+      if (outcome.checkoutURL) {
+        await openExternal(outcome.checkoutURL);
+        toast("info", "Finish in your browser", "The checkout opened in your browser. Come back and check again when it is done.");
+      }
+      break;
+    default:
+      toast("error", "That did not complete", outcome.message ?? "RevenueCat returned an error.");
+  }
 }
 
 export function setFilter(patch: Partial<Filters>): void {

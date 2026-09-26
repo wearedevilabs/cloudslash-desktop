@@ -315,11 +315,13 @@ for (const screen of SCREENS) {
   await page.close();
 }
 
-/* ---------------------------------------------------------------- paywall */
+/* ------------------------------------------------------- account support */
 
-// The paywall is a modal, so it cannot be deep-linked; it has to be driven. This
-// checks the three things a modal owes a keyboard user: it opens, it holds
-// focus, and Escape closes it and hands focus back.
+// The support surface lives on the Account screen, and appears once. Two panels
+// under the same title is the duplication this check exists to prevent.
+//
+// It deliberately never clicks the purchase control: a preview build carries the
+// live publishable key, so an audit that clicked it would start a real checkout.
 {
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 940, deviceScaleFactor: 1 });
@@ -328,82 +330,39 @@ for (const screen of SCREENS) {
   try {
     await page.goto(`${BASE}/?preview=1&screen=account`, { waitUntil: "networkidle0", timeout: 45000 });
     await page.evaluate(() => document.fonts.ready);
-    await page.waitForSelector(".balance__figure", { timeout: 15000 });
+    await page.waitForSelector(".view__inner", { timeout: 15000 });
 
-    // Click the first VISIBLE support action. Matching on text alone can pick up
-    // a hidden control from a surface that has not been rendered yet.
-    const opened = await page.evaluate(() => {
-      const matches = [...document.querySelectorAll("button")].filter((b) =>
-        /support cloudslash/i.test(b.textContent || ""),
+    const found = await page.evaluate(() => {
+      const sections = [...document.querySelectorAll(".panel__title")].filter((n) =>
+        (n.textContent || "").includes("CloudSlash Support"),
       );
-      const visible = matches.filter((b) => b.offsetParent !== null && !b.disabled);
-      if (!visible.length) return { clicked: false, matches: matches.length, visible: 0 };
-      visible[0].click();
-      return { clicked: true, matches: matches.length, visible: visible.length, label: visible[0].textContent };
+      const actions = [...document.querySelectorAll("button")].filter(
+        (b) => b.offsetParent !== null && /^support cloudslash/i.test((b.textContent || "").trim()),
+      );
+      const groups = [
+        ...new Set([...document.querySelectorAll('.plans input[type="radio"]')].map((i) => i.name)),
+      ];
+      return { sections: sections.length, actions: actions.length, groups };
     });
-    console.log("  trigger:", JSON.stringify(opened));
+    console.log("  support:", JSON.stringify(found));
+    report.accountSupport = found;
 
-    if (!opened.clicked) {
-      problems.push({
-        kind: "paywall-unreachable",
-        detail: `no visible support action (${opened.matches} matched, none visible)`,
-      });
-    } else {
-      // Wait for the dialog itself to become visible, not merely to exist.
-      await page.waitForSelector(".paywall:not([hidden])", { timeout: 5000 });
-      await new Promise((resolve) => setTimeout(resolve, 400));
-
-      const inside = await page.evaluate(() => Boolean(document.activeElement?.closest(".sheet")));
-      if (!inside) {
-        const where = await page.evaluate(() => document.activeElement?.tagName ?? "nothing");
-        problems.push({ kind: "paywall-focus", detail: `focus is on ${where}, not in the dialog` });
-      }
-
-      report.paywallDiag = await page.evaluate(() => {
-        const shell = document.querySelector(".shell");
-        const sheet = document.querySelector(".sheet");
-        const paywall = document.querySelector(".paywall");
-        return {
-          paywallHidden: paywall ? paywall.hidden : "no paywall element",
-          sheetChildren: sheet ? sheet.childElementCount : "no sheet",
-          shellPresent: Boolean(shell),
-          shellInert: shell ? shell.inert : "no shell",
-          active: `${document.activeElement?.tagName}.${document.activeElement?.className || ""}`,
-        };
-      });
-      console.log("  diagnostics:", JSON.stringify(report.paywallDiag));
-
-      const inert = await page.evaluate(() => Boolean(document.querySelector(".shell")?.inert));
-      if (!inert) problems.push({ kind: "paywall-inert", detail: "the page behind the dialog is still reachable" });
-
-      const auditResult = await page.evaluate(audit);
-      problems.push(...auditResult.problems.slice(0, 8));
-
-      // Read the dialog's own copy, not the page behind it.
-      const dialogText = await page.evaluate(() => document.querySelector(".sheet")?.innerText ?? "");
-      if (!/free/i.test(dialogText)) {
-        problems.push({ kind: "paywall-copy", detail: "the dialog does not say the features are free" });
-      }
-      if (dialogText.length < 200) {
-        problems.push({ kind: "paywall-thin", detail: `the dialog only rendered ${dialogText.length} characters` });
-      }
-
-      // Escape must close it.
-      await page.keyboard.press("Escape");
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      const closed = await page.evaluate(() => {
-        const paywall = document.querySelector(".paywall");
-        return !paywall || paywall.hidden;
-      });
-      if (!closed) problems.push({ kind: "paywall-escape", detail: "Escape did not close the dialog" });
+    if (found.sections !== 1) {
+      problems.push({ kind: "support-sections", detail: `${found.sections} panels titled CloudSlash Support` });
+    }
+    if (found.actions > 1) {
+      problems.push({ kind: "support-actions", detail: `${found.actions} support actions visible at once` });
+    }
+    if (found.groups.length > 1) {
+      problems.push({ kind: "support-groups", detail: `plan radios split across ${found.groups.length} groups` });
     }
   } catch (err) {
-    problems.push({ kind: "paywall-crash", detail: String(err).split("\n")[0] });
+    problems.push({ kind: "support-crash", detail: String(err).split("\n")[0] });
   }
 
-  report.paywall = { problems };
+  report.support = { problems };
   report.failures += problems.length;
-  console.log(`\nPAYWALL  ${problems.length ? `FAIL (${problems.length})` : "pass"}`);
+  console.log(`\nSUPPORT  ${problems.length ? `FAIL (${problems.length})` : "pass"}`);
   for (const problem of problems.slice(0, 10)) console.log(`  - [${problem.kind}] ${problem.detail}`);
 
   await page.close();

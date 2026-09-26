@@ -17,50 +17,31 @@ the rollback script that undoes it. Nothing is deleted, only frozen and returned
 
 ---
 
-## Installation
+## Install
 
-### Homebrew (macOS/Linux)
+Download the application for your platform from the [releases page](../../releases):
 
-```bash
-brew tap DrSkyle/tap
-brew install cloudslash
-```
+| Platform | File |
+| --- | --- |
+| macOS | `cloudslash-desktop_darwin_universal.app.zip` — arm64 and x86_64 in one bundle |
+| Linux | `cloudslash-desktop_linux_amd64.tar.gz` — the binary, an icon and a `.desktop` entry |
+| Windows | `cloudslash-desktop_windows_amd64.zip` |
 
-### Go Install
-
-```bash
-go install github.com/DrSkyle/cloudslash/v2/cmd/cloudslash-cli@latest
-```
-
-### From Source
+The macOS build is ad-hoc signed, so the first launch needs either right-click → Open, or:
 
 ```bash
-git clone https://github.com/DrSkyle/CloudSlash.git
-cd CloudSlash
-make build
+xattr -dr com.apple.quarantine /Applications/CloudSlash.app
 ```
 
-### Quick Start
+It opens on **Statement** and runs a demo scan immediately, so there is something to read before you point it at an account.
 
-```bash
-# Automated Install (Legacy)
-curl -sL https://raw.githubusercontent.com/DrSkyle/CloudSlash/main/scripts/install.sh | bash
-```
+### Nothing to configure
 
-### Prerequisites
+No account, no API key, no sign-in. To read a live account it uses the AWS configuration already on your machine — and it asks before it looks at it, because that configuration names the accounts and environments you work with.
 
-- **AWS CLI v2**: Required for executing generated remediation scripts (`safe_cleanup.sh`). CloudSlash will warn you if it's missing.
-- **Terraform**: Required for state analysis features.
+### On Windows
 
-### Windows
-
-The desktop app runs natively on Windows, and everything works there except executing the generated remediation scripts — those are POSIX shell. To run them, open a WSL shell in the artifact folder, or run the Linux build inside WSL, where the whole application works.
-
-The command-line tool needs a POSIX host:
-
-1.  **Install WSL2**: `wsl --install`
-2.  Open an Ubuntu/Debian terminal.
-3.  Run the **Linux installer** inside WSL.
+Everything works natively on Windows except running the generated remediation scripts, which are POSIX shell. Open a WSL shell in the artifact folder to run them, or use the Linux build inside WSL, where the whole application works.
 
 ---
 
@@ -586,12 +567,11 @@ CloudSlash ships a desktop application: a native window around a purpose-built i
 
 The interface is set like an audit statement (it is a forensic tool, after all): a running total you can always see, a register of line items, and charts you can click to jump straight to the rows behind them. Nothing is uploaded, and there is no API key to enter — entitlement is resolved through RevenueCat's SDK against a publishable key, and payment happens on RevenueCat's hosted checkout.
 
-### Run it
+### Building from source
+
+If you would rather build it than download it: Go 1.25+, Node, and the platform GUI toolchain — `gtk4` and `webkitgtk-6.0` development packages on Linux, Xcode command line tools on macOS.
 
 ```bash
-# macOS and Linux. Needs Go 1.25+, Node, and the platform GUI toolchain:
-#   Linux  : gtk4 and webkitgtk-6.0 development packages
-#   macOS  : Xcode command line tools
 make desktop
 ./bin/cloudslash-desktop
 ```
@@ -623,7 +603,7 @@ make desktop-verify     # layout, contrast and typography audit across all scree
 
 **Nothing in CloudSlash is gated.** Every report, the remediation plan and the rollback script are free on every platform. Support is a donation, offered on the Account screen as two plans — $5 once, or $5 a month — alongside links to Patreon and Open Collective.
 
-The purchase flow is RevenueCat, using Web Billing backed by Paddle: an offering whose packages carry the Paddle prices, with a `cloudslash_pro` entitlement attached to both. Entitlement is resolved client-side through `purchases-js` with a **publishable** key, and the app never holds a secret. The key committed in `src/config/revenuecat.ts` is deliberate: a publishable key is readable by anyone who has the app, ships inside every binary regardless, and cannot refund, read other customers, or change the project. `VITE_REVENUECAT_WEB_API_KEY` overrides it, which is how a sandbox or a different project is used.
+The purchase flow is RevenueCat, using Web Billing backed by Paddle: an offering whose packages carry the Paddle prices, with a `cloudslash_pro` entitlement attached to both. Entitlement is resolved client-side through `purchases-js` with a **publishable** key, and the app never holds a secret. The key committed in `src/config/revenuecat.ts` is RevenueCat's **test store** key, deliberately: a clone or a download completes the whole flow without moving anyone's money. Point a real build at a live key with `VITE_REVENUECAT_WEB_API_KEY`, which wins over the committed value.
 
 A secret key (`sk_…`) is refused rather than shipped. It is read from the environment only, and only by the optional server-side entitlement check:
 

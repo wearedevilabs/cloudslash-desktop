@@ -684,8 +684,9 @@
 .plan input {
   flex: none;
   accent-color: var(--waste);
-  width: 15px;
-  height: 15px;
+  /* Matches the 24px floor the rest of the interface holds to. */
+  width: 24px;
+  height: 24px;
   margin: 0;
 }
 

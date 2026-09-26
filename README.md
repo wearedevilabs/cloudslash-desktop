@@ -1,5 +1,8 @@
 # CloudSlash Desktop
 
+**Note: This was a working demo made for a Hackathon.**
+
+
 CloudSlash Desktop is the application: a native window that turns a cloud account into a
 statement you can read. One scan, using the credentials already on your machine — no
 agents, no keys to paste, nothing uploaded.

@@ -72,10 +72,7 @@ func (d *Desktop) RunRemediation(script string) RemediationResult {
 	// is the case on Windows.
 	shell, lookErr := exec.LookPath("sh")
 	if lookErr != nil {
-		return RemediationResult{
-			Script: name,
-			Error:  "these scripts are POSIX shell scripts and this machine has no sh to run them with. Run the file by hand, or use a POSIX host",
-		}
+		return RemediationResult{Script: name, Error: scriptGuidance()}
 	}
 
 	cmd := exec.CommandContext(ctx, shell, name)

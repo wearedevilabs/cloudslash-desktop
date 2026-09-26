@@ -312,6 +312,24 @@ export function createSettingsView(): View {
       ),
     );
 
+    if (profile?.WSL) {
+      sections.push(
+        note(
+          "info",
+          "Running under WSL",
+          "The generated scripts run normally here. Artifacts are written to the Linux filesystem, so read them from a WSL shell rather than from Windows Explorer.",
+        ),
+      );
+    } else if (profile && !profile.ScriptsRunnable) {
+      sections.push(
+        note(
+          "warn",
+          "Remediation scripts need a POSIX shell",
+          "The freeze and restore scripts are POSIX shell scripts, which native Windows cannot run. They work unchanged inside WSL: open a WSL shell in the artifact folder and run the file there. The scan, the findings and every report are unaffected.",
+        ),
+      );
+    }
+
     if (mode === "preview") {
       sections.push(
         note(

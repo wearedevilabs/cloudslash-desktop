@@ -85,6 +85,10 @@ export interface Profile {
   OutputDir: string;
   DataDir: string;
   Platform: string;
+  /** False on native Windows, where the generated POSIX shell scripts cannot run. */
+  ScriptsRunnable: boolean;
+  /** True when this is a Linux build running under Windows. */
+  WSL: boolean;
 }
 
 /**

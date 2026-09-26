@@ -201,9 +201,11 @@ const PROFILE: Profile = {
   UserID: "cs_7f21bd94c3a8",
   Version: "2.2.6",
   License: "AGPLv3 (Enterprise)",
-  OutputDir: "cloudslash-out",
+  OutputDir: "~/Documents/CloudSlash",
   DataDir: "~/.cloudslash",
   Platform: "preview",
+  ScriptsRunnable: true,
+  WSL: false,
 };
 
 const EXPORTS: ExportSpec[] = [

@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -123,6 +122,11 @@ type ProfileDTO struct {
 	OutputDir string `json:"OutputDir"`
 	DataDir   string `json:"DataDir"`
 	Platform  string `json:"Platform"`
+	// ScriptsRunnable is false on native Windows, where the generated POSIX
+	// shell scripts cannot be executed. WSL reports true.
+	ScriptsRunnable bool `json:"ScriptsRunnable"`
+	// WSL is true when this is a Linux build running under Windows.
+	WSL bool `json:"WSL"`
 }
 
 // PrefsDTO mirrors engine.Config's user-facing surface one-to-one, so a scan
@@ -322,12 +326,14 @@ func newUserID() string {
 // Profile returns facts about this install.
 func (d *Desktop) Profile() ProfileDTO {
 	return ProfileDTO{
-		UserID:    d.userID,
-		Version:   version.Current,
-		License:   version.License,
-		OutputDir: resolvedOutputDir(d.prefs.OutputDir),
-		DataDir:   dataDir(),
-		Platform:  runtime.GOOS,
+		UserID:          d.userID,
+		Version:         version.Current,
+		License:         version.License,
+		OutputDir:       resolvedOutputDir(d.prefs.OutputDir),
+		DataDir:         dataDir(),
+		Platform:        platformLabel(),
+		ScriptsRunnable: scriptsRunnable(),
+		WSL:             isWSL(),
 	}
 }
 

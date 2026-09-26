@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -75,5 +76,44 @@ func TestOutputDirIsAbsoluteOnAnyPlatform(t *testing.T) {
 	}
 	if strings.Contains(dir, "..") {
 		t.Errorf("default output dir should be clean, got %q", dir)
+	}
+}
+
+func TestIsWSLReadsTheEnvironment(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("WSL is only detectable from a Linux userspace")
+	}
+
+	t.Setenv("WSL_DISTRO_NAME", "Ubuntu")
+	if !isWSL() {
+		t.Error("WSL_DISTRO_NAME should be enough to recognise WSL")
+	}
+
+	t.Setenv("WSL_DISTRO_NAME", "")
+	t.Setenv("WSL_INTEROP", "/run/WSL/1_interop")
+	if !isWSL() {
+		t.Error("WSL_INTEROP should be enough to recognise WSL")
+	}
+}
+
+func TestPlatformLabelNamesWSLDistinctly(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("only meaningful on Linux")
+	}
+
+	t.Setenv("WSL_DISTRO_NAME", "Ubuntu")
+	if got := platformLabel(); got != "windows (wsl)" {
+		t.Errorf("platformLabel() = %q, want %q", got, "windows (wsl)")
+	}
+}
+
+func TestScriptGuidanceNamesTheProblem(t *testing.T) {
+	got := scriptGuidance()
+	if !strings.Contains(got, "POSIX") {
+		t.Errorf("guidance should name the problem, got %q", got)
+	}
+	// Native Windows is told about WSL, which is the way out for those users.
+	if runtime.GOOS == "windows" && !strings.Contains(got, "WSL") {
+		t.Errorf("Windows guidance should mention WSL, got %q", got)
 	}
 }

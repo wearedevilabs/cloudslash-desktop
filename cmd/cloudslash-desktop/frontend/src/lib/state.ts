@@ -577,6 +577,8 @@ export async function verifyAws(): Promise<void> {
 export async function chooseProfile(profile: string): Promise<void> {
   set({ awsIdentity: null });
   await savePrefs({ Profile: profile });
+  // Each profile carries its own region, so what was detected changes with it.
+  await detectAws();
 }
 
 /* ---------------------------------------------------------- remediation */

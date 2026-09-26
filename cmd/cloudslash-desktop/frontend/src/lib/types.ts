@@ -17,6 +17,8 @@ export interface AwsEnvironment {
   /** Human-readable note on where the region came from. */
   Source: string;
   Error: string;
+  /** True when the answer is being withheld pending consent. */
+  NeedsPermission: boolean;
 }
 
 export interface Finding {
@@ -117,6 +119,11 @@ export interface Prefs {
   Demo: boolean;
   /** Name of the AWS CLI profile to scan with. Empty means the default chain. */
   Profile: string;
+  /**
+   * Explicit consent to read the AWS configuration. False until the operator
+   * grants it, and nothing under ~/.aws is read while it is false.
+   */
+  AllowAwsAccess: boolean;
 
   // Scope
   AllProfiles: boolean;
@@ -153,6 +160,7 @@ export function defaultPrefs(): Prefs {
     // into rather than assumed.
     Demo: false,
     Profile: "",
+    AllowAwsAccess: false,
     AllProfiles: false,
     TFStatePath: "",
     DisableCWMetrics: false,

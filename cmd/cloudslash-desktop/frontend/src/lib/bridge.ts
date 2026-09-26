@@ -36,6 +36,8 @@ export interface Backend {
   awsProfiles(): Promise<AwsProfiles>;
   /** Profiles plus the region and profile that would be used by default. */
   detectAws(): Promise<AwsEnvironment>;
+  /** Record whether the local AWS configuration may be read. */
+  grantAwsAccess(allow: boolean): Promise<void>;
   /** Confirm a profile works, by asking STS who it is. */
   verifyAws(profile: string, region: string): Promise<AwsIdentity>;
   /** Run a generated remediation script, capturing what it printed. */
@@ -77,6 +79,7 @@ const nativeBackend: Backend = {
   verifyEntitlement: () => Call.ByName(`${SERVICE}.VerifyEntitlement`) as Promise<Verification>,
   awsProfiles: () => Call.ByName(`${SERVICE}.AwsProfiles`) as Promise<AwsProfiles>,
   detectAws: () => Call.ByName(`${SERVICE}.DetectAws`) as Promise<AwsEnvironment>,
+  grantAwsAccess: (allow) => Call.ByName(`${SERVICE}.GrantAwsAccess`, allow),
   verifyAws: (profile, region) => Call.ByName(`${SERVICE}.VerifyAws`, profile, region) as Promise<AwsIdentity>,
   runRemediation: (script) => Call.ByName(`${SERVICE}.RunRemediation`, script) as Promise<RemediationResult>,
 };

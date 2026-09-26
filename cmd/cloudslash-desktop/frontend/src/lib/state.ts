@@ -549,6 +549,23 @@ export async function detectAws(): Promise<void> {
   }
 }
 
+/**
+ * Record whether the local AWS configuration may be read. The Go service
+ * persists this itself, so the local view is only kept in step.
+ */
+export async function grantAwsAccess(allow: boolean): Promise<void> {
+  try {
+    await api().grantAwsAccess(allow);
+    set({
+      prefs: { ...state.prefs, AllowAwsAccess: allow, Profile: allow ? state.prefs.Profile : "" },
+      awsIdentity: null,
+    });
+    await detectAws();
+  } catch (err) {
+    toast("error", "Could not record that choice", String(err));
+  }
+}
+
 /** Confirm the chosen profile works, by asking STS who it is. */
 export async function verifyAws(): Promise<void> {
   if (state.verifyingAws) return;

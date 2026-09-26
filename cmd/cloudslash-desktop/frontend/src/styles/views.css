@@ -48,6 +48,26 @@
   margin-left: var(--s3);
 }
 
+/* The consent question. It sits on its own line under the command bar. */
+.scanbar__ask {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  flex-wrap: wrap;
+  padding-top: var(--s4);
+  margin-top: var(--s4);
+  border-top: 1px solid var(--rule);
+}
+
+.scanbar__ask-text {
+  flex: 1;
+  min-width: 24ch;
+  color: var(--ink-2);
+  font-size: var(--t-small);
+  max-width: 68ch;
+}
+
 .toolbar__group {
   display: inline-flex;
   align-items: center;

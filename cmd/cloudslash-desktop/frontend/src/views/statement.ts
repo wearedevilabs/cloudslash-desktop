@@ -5,6 +5,7 @@ import {
   cancelScan,
   chooseProfile,
   filterToRegister,
+  grantAwsAccess,
   loadAwsProfiles,
   runScan,
   savePrefs,
@@ -336,6 +337,20 @@ function buildScanBar() {
   const scanButton = button({ label: "Run scan", icon: "play", variant: "primary", onClick: () => void runScan() });
   const stopButton = button({ label: "Stop", icon: "close", variant: "quiet", onClick: () => void cancelScan() });
   stopButton.hidden = true;
+
+  // Reading ~/.aws says who someone works for, so it is asked for rather than
+  // assumed. Nothing is read until this is answered.
+  const permissionAsk = h(
+    "div",
+    { class: "scanbar__ask", hidden: true },
+    h(
+      "span",
+      { class: "scanbar__ask-text" },
+      "May CloudSlash read the AWS configuration on this machine? It names your profiles and endpoints; it never leaves your computer.",
+    ),
+    button({ label: "Allow", size: "sm", onClick: () => void grantAwsAccess(true) }),
+    button({ label: "Not now", variant: "quiet", size: "sm", onClick: () => void grantAwsAccess(false) }),
+  );
   const statusText = h("span", { class: "scanbar__status" });
   const progress = h("span", { class: "scan__bar", hidden: true });
 
@@ -362,6 +377,7 @@ function buildScanBar() {
     stopButton,
     statusText,
     progress,
+    permissionAsk,
   );
 
   let ticks = 0;
@@ -395,9 +411,15 @@ function buildScanBar() {
     if (live) syncProfiles();
 
     const { scanning } = state;
-    scanButton.disabled = scanning;
+    const needsPermission = Boolean(state.awsDetected?.NeedsPermission);
+    const nothingToRead = Boolean(state.awsDetected && !needsPermission && state.awsDetected.Error);
+
+    // A live scan is only offered once there is something to read and consent to
+    // read it. Demo mode is always available.
+    scanButton.disabled = scanning || (!state.prefs.Demo && (needsPermission || nothingToRead));
     setButtonLabel(scanButton, scanning ? "Scanning…" : "Run scan");
     stopButton.hidden = !scanning;
+    permissionAsk.hidden = !needsPermission;
 
     // A run reads these once when it starts, so editing them mid-scan would not
     // change the run already in flight.

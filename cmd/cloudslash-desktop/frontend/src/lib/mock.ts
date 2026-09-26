@@ -277,6 +277,7 @@ export const mockBackend = {
       // The preview is a demo by definition; there is no account to read.
       Demo: !forceEmpty,
       Profile: "",
+      AllowAwsAccess: false,
       AllProfiles: false,
       TFStatePath: "",
       DisableCWMetrics: false,
@@ -413,7 +414,12 @@ export const mockBackend = {
       Region: "us-east-1",
       Source: "us-east-1 (default)",
       Error: "",
+      NeedsPermission: false,
     };
+  },
+
+  async grantAwsAccess() {
+    await delay(40);
   },
 
   async chooseDirectory() {

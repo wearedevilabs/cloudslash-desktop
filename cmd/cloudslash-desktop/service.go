@@ -131,6 +131,10 @@ type PrefsDTO struct {
 	Region           string  `json:"Region"`
 	Demo             bool    `json:"Demo"`
 	Profile          string  `json:"Profile"`
+	// AllowAwsAccess is explicit consent to read the AWS configuration. It is
+	// false until the operator grants it, and nothing under ~/.aws is touched
+	// while it is false.
+	AllowAwsAccess   bool    `json:"AllowAwsAccess"`
 	AllProfiles      bool    `json:"AllProfiles"`
 	TFStatePath      string  `json:"TFStatePath"`
 	DisableCWMetrics bool    `json:"DisableCWMetrics"`
@@ -370,6 +374,13 @@ func (d *Desktop) SavePrefs(update PrefsDTO) error {
 // AwsProfiles lists the profiles in the user's AWS configuration, so the
 // interface can offer a choice rather than asking anyone to paste a key.
 func (d *Desktop) AwsProfiles() AwsProfilesDTO {
+	if !d.awsAllowed() {
+		return AwsProfilesDTO{
+			Profiles: []string{},
+			Error:    "CloudSlash has not been allowed to read the AWS configuration on this machine",
+		}
+	}
+
 	profiles, err := engineaws.ListProfiles()
 	if err != nil {
 		return AwsProfilesDTO{Profiles: []string{}, Error: err.Error()}
@@ -385,11 +396,43 @@ type AwsEnvironment struct {
 	Region   string   `json:"Region"`
 	Source   string   `json:"Source"`
 	Error    string   `json:"Error"`
+	// NeedsPermission is true when the answer is withheld pending consent.
+	NeedsPermission bool `json:"NeedsPermission"`
+}
+
+// awsAllowed reports whether the operator has permitted reading the AWS
+// configuration. Every path that touches ~/.aws checks this first.
+func (d *Desktop) awsAllowed() bool {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return d.prefs.AllowAwsAccess
+}
+
+// GrantAwsAccess records whether the local AWS configuration may be read.
+//
+// Reading ~/.aws is how the app learns which accounts exist, which is not
+// something to do behind someone's back: it says which clients and environments
+// they work with. The interface asks once and remembers the answer.
+func (d *Desktop) GrantAwsAccess(allow bool) error {
+	d.mu.Lock()
+	d.prefs.AllowAwsAccess = allow
+	if !allow {
+		// Withdrawing consent also forgets what was chosen, so nothing lingers.
+		d.prefs.Profile = ""
+	}
+	d.mu.Unlock()
+	return d.persist()
 }
 
 // DetectAws reports the profiles present and the region that would be used, so
 // the interface can fill those in rather than asking.
 func (d *Desktop) DetectAws() AwsEnvironment {
+	// Nothing is read before consent: the profiles on a machine describe who its
+	// owner works for.
+	if !d.awsAllowed() {
+		return AwsEnvironment{Profiles: []string{}, NeedsPermission: true}
+	}
+
 	out := AwsEnvironment{Profiles: []string{}}
 
 	profiles, err := engineaws.ListProfiles()
@@ -535,11 +578,16 @@ func (d *Desktop) StartScan(region string, demo bool) error {
 	// Reading nothing would otherwise spend its time hunting for credentials that
 	// do not exist, leaving the window on "scanning" with no way forward. Refuse
 	// before any state changes, and say what to do about it.
-	if !demo && !AwsConfigured() {
-		return fmt.Errorf(
-			"no AWS configuration was found on this machine, so there is nothing to read. " +
-				"Run `aws configure` to add a profile, or switch on demo mode to see the interface working on synthetic data",
-		)
+	if !demo {
+		if !d.awsAllowed() {
+			return fmt.Errorf("CloudSlash has not been allowed to read the AWS configuration on this machine yet")
+		}
+		if !AwsConfigured() {
+			return fmt.Errorf(
+				"no AWS configuration was found on this machine, so there is nothing to read. " +
+					"Run `aws configure` to add a profile, or switch on demo mode to see the interface working on synthetic data",
+			)
+		}
 	}
 
 	d.mu.Lock()

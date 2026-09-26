@@ -412,7 +412,9 @@ function startPolling(): void {
     if (finished) {
       window.clearInterval(pollTimer);
       pollTimer = undefined;
-      if (snapshot.Status === "failed") {
+      if (snapshot.Status === "cancelled") {
+        toast("info", "Scan stopped", "The run was stopped before it finished.");
+      } else if (snapshot.Status === "failed") {
         toast("error", "The scan failed", snapshot.Error || "The engine returned an error.");
       } else if (snapshot.Partial) {
         toast(
@@ -453,6 +455,28 @@ export async function openOutputDir(): Promise<void> {
     await api().openOutputDir();
   } catch (err) {
     toast("error", "Could not open the folder", String(err));
+  }
+}
+
+/** Stop a run in progress, so a scan that stalls is not a dead end. */
+export async function cancelScan(): Promise<void> {
+  try {
+    await api().cancelScan();
+  } catch (err) {
+    toast("error", "Could not stop the scan", String(err));
+  }
+}
+
+/**
+ * Ask the operating system for a folder. An empty answer means the operator
+ * closed the picker, which is not an error and changes nothing.
+ */
+export async function chooseDirectory(title: string, startIn: string, apply: (path: string) => Promise<void>): Promise<void> {
+  try {
+    const chosen = await api().chooseDirectory(title, startIn);
+    if (chosen) await apply(chosen);
+  } catch (err) {
+    toast("error", "Could not open the folder picker", String(err));
   }
 }
 

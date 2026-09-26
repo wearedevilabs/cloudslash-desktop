@@ -13,9 +13,6 @@ cloudslash-out/
 # Verification scratch
 /.verify/
 
-# Editor and tooling state
-.commandcode/
-
 # OS noise
 .DS_Store
 

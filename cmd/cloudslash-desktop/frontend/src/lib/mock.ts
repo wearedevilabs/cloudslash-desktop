@@ -401,6 +401,16 @@ export const mockBackend = {
     await delay(60);
   },
 
+  async cancelScan() {
+    await delay(40);
+  },
+
+  async chooseDirectory() {
+    await delay(40);
+    // No native picker in a browser preview.
+    return "";
+  },
+
   async openExternal(url: string) {
     await delay(40);
     // In the preview the OS browser is the right target anyway.

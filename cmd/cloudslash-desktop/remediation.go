@@ -53,7 +53,7 @@ func (d *Desktop) RunRemediation(script string) RemediationResult {
 	}
 
 	d.mu.RLock()
-	outputDir := d.prefs.OutputDir
+	outputDir := resolvedOutputDir(d.prefs.OutputDir)
 	d.mu.RUnlock()
 
 	path := filepath.Join(outputDir, name)

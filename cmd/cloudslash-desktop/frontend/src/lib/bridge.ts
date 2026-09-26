@@ -15,12 +15,16 @@ export interface Backend {
   savePrefs(prefs: Prefs): Promise<void>;
   snapshot(): Promise<Snapshot>;
   startScan(region: string, demo: boolean): Promise<void>;
+  /** Stop a run in progress. */
+  cancelScan(): Promise<void>;
   artifacts(): Promise<Artifact[]>;
   exportSpecs(): Promise<ExportSpec[]>;
   exportArtifact(kind: string): Promise<string>;
   ignoreFinding(id: string): Promise<void>;
   openArtifact(name: string): Promise<void>;
   openOutputDir(): Promise<void>;
+  /** Native folder picker. An empty string means the operator cancelled. */
+  chooseDirectory(title: string, startIn: string): Promise<string>;
   openExternal(url: string): Promise<void>;
   /** Record the last known entitlement so the plan survives going offline. */
   cacheEntitlement(active: boolean, expiresAt: string, source: string): Promise<void>;
@@ -56,12 +60,14 @@ const nativeBackend: Backend = {
   savePrefs: (prefs) => Call.ByName(`${SERVICE}.SavePrefs`, prefs),
   snapshot: () => Call.ByName(`${SERVICE}.Snapshot`) as Promise<Snapshot>,
   startScan: (region, demo) => Call.ByName(`${SERVICE}.StartScan`, region, demo),
+  cancelScan: () => Call.ByName(`${SERVICE}.CancelScan`),
   artifacts: () => Call.ByName(`${SERVICE}.Artifacts`) as Promise<Artifact[]>,
   exportSpecs: () => Call.ByName(`${SERVICE}.ExportSpecs`) as Promise<ExportSpec[]>,
   exportArtifact: (kind) => Call.ByName(`${SERVICE}.Export`, kind) as Promise<string>,
   ignoreFinding: (id) => Call.ByName(`${SERVICE}.Ignore`, id),
   openArtifact: (name) => Call.ByName(`${SERVICE}.OpenArtifact`, name),
   openOutputDir: () => Call.ByName(`${SERVICE}.OpenOutputDir`),
+  chooseDirectory: (title, startIn) => Call.ByName(`${SERVICE}.ChooseDirectory`, title, startIn) as Promise<string>,
   openExternal: (url) => Call.ByName(`${SERVICE}.OpenExternal`, url),
   cacheEntitlement: (active, expiresAt, source) =>
     Call.ByName(`${SERVICE}.CacheEntitlement`, active, expiresAt, source),

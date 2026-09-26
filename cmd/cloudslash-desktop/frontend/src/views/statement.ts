@@ -2,6 +2,7 @@ import { h } from "../lib/dom";
 import {
   byRegion,
   byService,
+  cancelScan,
   chooseProfile,
   filterToRegister,
   loadAwsProfiles,
@@ -332,6 +333,8 @@ function buildScanBar() {
   });
 
   const scanButton = button({ label: "Run scan", icon: "play", variant: "primary", onClick: () => void runScan() });
+  const stopButton = button({ label: "Stop", icon: "close", variant: "quiet", onClick: () => void cancelScan() });
+  stopButton.hidden = true;
   const statusText = h("span", { class: "scanbar__status" });
   const progress = h("span", { class: "scan__bar", hidden: true });
 
@@ -354,6 +357,7 @@ function buildScanBar() {
       h("span", { class: "switch__text" }, "demo"),
     ),
     scanButton,
+    stopButton,
     statusText,
     progress,
   );
@@ -391,6 +395,13 @@ function buildScanBar() {
     const { scanning } = state;
     scanButton.disabled = scanning;
     setButtonLabel(scanButton, scanning ? "Scanning…" : "Run scan");
+    stopButton.hidden = !scanning;
+
+    // A run reads these once when it starts, so editing them mid-scan would not
+    // change the run already in flight.
+    regionInput.disabled = scanning;
+    demoInput.disabled = scanning;
+    profileSelect.disabled = scanning;
 
     statusText.textContent = statusLine();
 
@@ -409,6 +420,7 @@ function buildScanBar() {
   function statusLine(): string {
     const { snapshot, prefs, scanning } = state;
     if (scanning) return `reading ${prefs.Region} · ${num(snapshot.TotalNodes)} resources so far`;
+    if (snapshot.Status === "cancelled") return "the last scan was stopped";
     if (snapshot.Status === "failed") return `last scan failed: ${snapshot.Error || "unknown error"}`;
     if (snapshot.Status === "complete") {
       return `${num(snapshot.TotalNodes)} resources · ${num(snapshot.WasteCount)} findings · ${money(

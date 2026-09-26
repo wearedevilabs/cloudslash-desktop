@@ -22,10 +22,11 @@ var errNoScan = errors.New("no scan has completed")
 type Status string
 
 const (
-	StatusReady    Status = "ready"
-	StatusScanning Status = "scanning"
-	StatusComplete Status = "complete"
-	StatusFailed   Status = "failed"
+	StatusReady     Status = "ready"
+	StatusScanning  Status = "scanning"
+	StatusComplete  Status = "complete"
+	StatusCancelled Status = "cancelled"
+	StatusFailed    Status = "failed"
 )
 
 // Finding is a presentation-neutral view of a waste node.
@@ -91,12 +92,26 @@ func (s *Session) Start() {
 
 	go func() {
 		_, scannedGraph, _, err := s.core.Run(s.ctx)
+
+		if err == nil && s.ctx.Err() != nil {
+			err = s.ctx.Err()
+		}
+		// The engine recovers its own panics, so a run that returns no graph and
+		// no error has collapsed. Reporting that as a clean scan is a lie.
+		if err == nil && scannedGraph == nil {
+			err = errors.New("the scan stopped without collecting anything")
+		}
+
 		s.mu.Lock()
 		s.graph = scannedGraph
 		s.err = err
-		if err != nil {
+		switch {
+		case errors.Is(err, context.Canceled):
+			s.status = StatusCancelled
+			s.err = nil
+		case err != nil:
 			s.status = StatusFailed
-		} else {
+		default:
 			s.status = StatusComplete
 		}
 		s.mu.Unlock()

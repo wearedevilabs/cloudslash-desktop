@@ -6,7 +6,7 @@
  * payload stays small (edge count instead of every edge).
  */
 
-export type ScanStatus = "ready" | "scanning" | "complete" | "failed";
+export type ScanStatus = "ready" | "scanning" | "complete" | "cancelled" | "failed";
 
 export interface Finding {
   ID: string;

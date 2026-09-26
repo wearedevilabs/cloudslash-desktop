@@ -46,6 +46,7 @@ type Desktop struct {
 	finishedAt time.Time
 	status     string
 	errMsg     string
+	cancel     context.CancelFunc
 
 	prefs     PrefsDTO
 	prefsPath string
@@ -151,7 +152,7 @@ func defaultPrefs() PrefsDTO {
 		// opted into rather than assumed.
 		Demo:           false,
 		MaxConcurrency: 20,
-		OutputDir:      "cloudslash-out",
+		OutputDir:      defaultOutputDir(),
 	}
 }
 
@@ -318,7 +319,7 @@ func (d *Desktop) Profile() ProfileDTO {
 		UserID:    d.userID,
 		Version:   version.Current,
 		License:   version.License,
-		OutputDir: d.prefs.OutputDir,
+		OutputDir: resolvedOutputDir(d.prefs.OutputDir),
 		DataDir:   dataDir(),
 		Platform:  runtime.GOOS,
 	}
@@ -348,6 +349,7 @@ func (d *Desktop) SavePrefs(update PrefsDTO) error {
 	if strings.TrimSpace(next.OutputDir) == "" {
 		next.OutputDir = defaults.OutputDir
 	}
+	next.OutputDir = resolvedOutputDir(next.OutputDir)
 	if next.MaxConcurrency <= 0 {
 		next.MaxConcurrency = defaults.MaxConcurrency
 	}
@@ -435,6 +437,7 @@ func (d *Desktop) Snapshot() SnapshotDTO {
 		if live.Status != "" {
 			d.status = string(live.Status)
 		}
+		d.cancel = nil
 		errMsg = live.Error
 		out.Status = d.status
 		out.FinishedAt = rfc3339(d.finishedAt)
@@ -499,6 +502,11 @@ func (d *Desktop) StartScan(region string, demo bool) error {
 	d.finishedAt = time.Time{}
 	d.mu.Unlock()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	d.mu.Lock()
+	d.cancel = cancel
+	d.mu.Unlock()
+
 	// A chosen profile is applied through the environment, which is the lever the
 	// engine and the AWS SDK already read. The credential itself is never read,
 	// copied, or stored by this app: only the name of the profile is.
@@ -524,13 +532,13 @@ func (d *Desktop) StartScan(region string, demo bool) error {
 		SlackChannel:     prefs.SlackChannel,
 		OtelEndpoint:     prefs.OtelEndpoint,
 		SkipTelemetry:    prefs.OtelEndpoint == "",
-		OutputDir:        prefs.OutputDir,
+		OutputDir:        resolvedOutputDir(prefs.OutputDir),
 		// The engine's own TUI must never take over the desktop window.
 		Headless: true,
 		Logger:   slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}
 
-	session, err := cloudapp.NewSession(context.Background(), cfg)
+	session, err := cloudapp.NewSession(ctx, cfg)
 	if err != nil {
 		d.mu.Lock()
 		d.status = statusFailed
@@ -549,6 +557,19 @@ func (d *Desktop) StartScan(region string, demo bool) error {
 	return nil
 }
 
+// CancelScan stops a run in progress.
+func (d *Desktop) CancelScan() error {
+	d.mu.Lock()
+	cancel := d.cancel
+	d.mu.Unlock()
+
+	if cancel == nil {
+		return fmt.Errorf("no scan is running")
+	}
+	cancel()
+	return nil
+}
+
 // Ignore suppresses a finding so it leaves the totals.
 func (d *Desktop) Ignore(id string) error {
 	d.mu.RLock()
@@ -563,7 +584,7 @@ func (d *Desktop) Ignore(id string) error {
 // Artifacts lists what the last scan has already written.
 func (d *Desktop) Artifacts() []ArtifactDTO {
 	d.mu.RLock()
-	outputDir := d.prefs.OutputDir
+	outputDir := resolvedOutputDir(d.prefs.OutputDir)
 	d.mu.RUnlock()
 
 	entries, err := os.ReadDir(outputDir)
@@ -644,7 +665,7 @@ func (d *Desktop) Export(kind string) (string, error) {
 
 	d.mu.RLock()
 	session := d.session
-	outputDir := d.prefs.OutputDir
+	outputDir := resolvedOutputDir(d.prefs.OutputDir)
 	d.mu.RUnlock()
 
 	if session == nil {
@@ -652,8 +673,8 @@ func (d *Desktop) Export(kind string) (string, error) {
 	}
 
 	path := filepath.Join(outputDir, spec.FileName)
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return "", fmt.Errorf("could not create %s: %w", filepath.Dir(path), err)
+	if err := ensureDir(filepath.Dir(path)); err != nil {
+		return "", err
 	}
 
 	var err error
@@ -685,7 +706,7 @@ func (d *Desktop) Export(kind string) (string, error) {
 // name cannot walk out of the output directory.
 func (d *Desktop) OpenArtifact(name string) error {
 	d.mu.RLock()
-	outputDir := d.prefs.OutputDir
+	outputDir := resolvedOutputDir(d.prefs.OutputDir)
 	d.mu.RUnlock()
 
 	base := filepath.Base(name)
@@ -703,17 +724,36 @@ func (d *Desktop) OpenArtifact(name string) error {
 // OpenOutputDir reveals the artifact folder.
 func (d *Desktop) OpenOutputDir() error {
 	d.mu.RLock()
-	outputDir := d.prefs.OutputDir
+	outputDir := resolvedOutputDir(d.prefs.OutputDir)
 	d.mu.RUnlock()
 
-	abs, err := filepath.Abs(outputDir)
-	if err != nil {
-		abs = outputDir
-	}
-	if err := os.MkdirAll(abs, 0o755); err != nil {
+	if err := ensureDir(outputDir); err != nil {
 		return err
 	}
-	return d.app.Browser.OpenURL(fileURL(abs))
+	return d.app.Browser.OpenURL(fileURL(outputDir))
+}
+
+// ChooseDirectory opens the operating system's folder picker.
+//
+// An empty result means the operator closed the picker, which is not an error.
+func (d *Desktop) ChooseDirectory(title, startIn string) (string, error) {
+	if d.app == nil {
+		return "", fmt.Errorf("the window is not ready")
+	}
+
+	dialog := d.app.Dialog.OpenFile().
+		CanChooseFiles(false).
+		CanChooseDirectories(true).
+		CanCreateDirectories(true).
+		SetTitle(strings.TrimSpace(title))
+
+	if start := strings.TrimSpace(startIn); start != "" {
+		if abs, err := resolveDir(start); err == nil {
+			dialog = dialog.SetDirectory(abs)
+		}
+	}
+
+	return dialog.PromptForSingleSelection()
 }
 
 // fileURL turns a local path into a URL the OS handler accepts.

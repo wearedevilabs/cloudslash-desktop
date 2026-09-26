@@ -95,19 +95,19 @@ const COMMITTED_OFFERING_ID = "devilabs";
 const COMMITTED_SUPPORT_URL = "";
 
 /**
- * A donation page — Patreon, Ko-fi, GitHub Sponsors, and the like. Optional, and
- * the way to accept support with no payment gateway involved. Its host has to be
- * on the allowlist in lib/links.ts and in the Go service.
+ * Donation pages offered alongside the plans — Patreon, Open Collective and the
+ * like. The way to accept support with no payment gateway involved. Every host
+ * here has to be on the allowlist in lib/links.ts and in the Go service.
  */
-const COMMITTED_DONATION_URL = "";
+const COMMITTED_DONATION_LINKS: Array<{ label: string; url: string }> = [
+  { label: "Patreon", url: "https://patreon.com/DrSkyle" },
+  { label: "Open Collective", url: "https://opencollective.com/wearedevilabs" },
+];
 
 /* ------------------------------------------------------------------------ */
 
 const rawSupport = (import.meta.env.VITE_SUPPORT_URL ?? "").trim();
 const SUPPORT_URL = rawSupport || COMMITTED_SUPPORT_URL || LINKS.support;
-
-const rawDonation = (import.meta.env.VITE_DONATION_URL ?? "").trim();
-const DONATION_URL = rawDonation || COMMITTED_DONATION_URL;
 
 export interface RevenueCatConfig {
   webApiKey: string;
@@ -118,8 +118,8 @@ export interface RevenueCatConfig {
   trialDays: number;
   /** Hosted checkout, used when the SDK cannot take the payment. */
   supportUrl: string;
-  /** A donation page, offered alongside the plans. Empty hides it. */
-  donationUrl: string;
+  /** Donation pages, offered alongside the plans. Empty hides them. */
+  donationLinks: Array<{ label: string; url: string }>;
   urls: { manage: string; terms: string; privacy: string };
 }
 
@@ -130,7 +130,7 @@ export const REVENUECAT: RevenueCatConfig = {
   currency: rawCurrency || null,
   trialDays: 7,
   supportUrl: SUPPORT_URL,
-  donationUrl: DONATION_URL,
+  donationLinks: COMMITTED_DONATION_LINKS,
   urls: {
     manage: LINKS.account,
     terms: LINKS.terms,

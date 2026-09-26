@@ -980,6 +980,12 @@
   margin-top: var(--s5);
 }
 
+.row-actions__label {
+  color: var(--ink-3);
+  font-size: var(--t-small);
+  margin-right: var(--s2);
+}
+
 /* ---- segmented control ------------------------------------------------- */
 
 .seg {

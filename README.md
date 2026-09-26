@@ -2,13 +2,17 @@
 
 ![Version v2.2.6](https://img.shields.io/badge/version-v2.2.6-blue?style=flat-square) ![License AGPLv3](https://img.shields.io/badge/license-AGPLv3-lightgrey?style=flat-square) ![Build Status](https://img.shields.io/badge/build-passing-success?style=flat-square) [![Go Report Card](https://goreportcard.com/badge/github.com/DrSkyle/CloudSlash)](https://goreportcard.com/report/github.com/DrSkyle/CloudSlash) [![Go Reference](https://pkg.go.dev/badge/github.com/DrSkyle/CloudSlash.svg)](https://pkg.go.dev/github.com/DrSkyle/CloudSlash)
 
-> **"Infrastructure that heals itself."**
+CloudSlash reads a cloud account and tells you what you are paying for and not using.
 
-CloudSlash is an autonomous infrastructure optimization platform designed for high-scale, enterprise cloud environments. Unlike passive observability tools that merely report metrics, CloudSlash leverages advanced mathematical modeling, graph topology analysis, and Abstract Syntax Tree (AST) parsing to actively solve resource inefficiency problems at their source.
+One scan, using the credentials already on your machine — no agents, no keys to paste,
+nothing uploaded. It produces a statement of the waste, a register of every finding with
+its cost, risk and owner, and the artifacts to act on it: a remediation plan, and the
+rollback script that undoes it. Nothing is deleted, only frozen and returned.
 
-It functions as a forensic auditor and autonomous agent, correlating disparate data sources such as CloudWatch metrics, network traffic logs, infrastructure-as-code (IaC) definitions and version control history to identify, attribute and remediate waste with mathematical certainty.
+It ships as a desktop application, with a command-line tool and a terminal interface
+alongside it.
 
-![CloudSlash TUI](assets/cloudslashtui.png)
+![CloudSlash desktop](assets/desktop-statement.png)
 
 ---
 
@@ -47,14 +51,14 @@ curl -sL https://raw.githubusercontent.com/DrSkyle/CloudSlash/main/scripts/insta
 - **AWS CLI v2**: Required for executing generated remediation scripts (`safe_cleanup.sh`). CloudSlash will warn you if it's missing.
 - **Terraform**: Required for state analysis features.
 
-### Windows Users
+### Windows
 
-CloudSlash requires Linux primitives (Bash, SSH, Terraform). **Native Windows (PowerShell/CMD) is not supported.**
+The desktop app runs natively on Windows, and everything works there except executing the generated remediation scripts — those are POSIX shell. To run them, open a WSL shell in the artifact folder, or run the Linux build inside WSL, where the whole application works.
 
-**How to run on Windows:**
+The command-line tool needs a POSIX host:
 
 1.  **Install WSL2**: `wsl --install`
-2.  Open Ubuntu/Debian terminal.
+2.  Open an Ubuntu/Debian terminal.
 3.  Run the **Linux installer** inside WSL.
 
 ---
@@ -614,25 +618,19 @@ make desktop-verify     # layout, contrast and typography audit across all scree
 
 `desktop-verify` drives every screen in headless Chromium and fails the build on clipped text, overlapping elements, contrast below 4.5:1, unreadably small hit targets, or copy that went missing. It is worth running after any styling change.
 
-Billing configuration is documented in `frontend/.env.example`. Only a RevenueCat **publishable** key (`rcb_…`) is ever accepted: the build refuses a secret key rather than shipping one.
+### Support, and RevenueCat
 
+**Nothing in CloudSlash is gated.** Every report, the remediation plan and the rollback script are free on every platform. Support is a donation, offered on the Account screen as two plans — $5 once, or $5 a month — alongside links to Patreon and Open Collective.
 
-### Pro features and RevenueCat
+The purchase flow is RevenueCat, using Web Billing backed by Paddle: an offering whose packages carry the Paddle prices, with a `cloudslash_pro` entitlement attached to both. Entitlement is resolved client-side through `purchases-js` with a **publishable** key, and the app never holds a secret. The key committed in `src/config/revenuecat.ts` is deliberate: a publishable key is readable by anyone who has the app, ships inside every binary regardless, and cannot refund, read other customers, or change the project. `VITE_REVENUECAT_WEB_API_KEY` overrides it, which is how a sandbox or a different project is used.
 
-Three features (remediation plans, the executive HTML dashboard and the analysis report) are gated behind a Pro entitlement resolved through the [RevenueCat REST API v1](https://www.revenuecat.com/docs/api-v1):
+A secret key (`sk_…`) is refused rather than shipped. It is read from the environment only, and only by the optional server-side entitlement check:
 
-- Use a RevenueCat **secret API key** (`sk_...`). The REST API rejects the public SDK keys, so supply it through the environment rather than typing it into the UI:
+```bash
+export REVENUECAT_SECRET_KEY=sk_...   # server-side check only. Never in a build.
+```
 
-  ```bash
-  export REVENUECAT_SECRET_KEY=sk_...
-  export REVENUECAT_APP_USER_ID=your-app-user-id     # optional
-  export REVENUECAT_ENTITLEMENT_ID=cloudslash_pro    # optional, this is the default
-  ```
-
-- Or fill in the same values on the **Pro** screen (assuming a secret key and the App User ID shared with your mobile app) and choose **Save & verify**.
-- CloudSlash calls `GET https://api.revenuecat.com/v1/subscribers/{app_user_id}` and unlocks Pro while the `cloudslash_pro` entitlement is active.
-- The last verified status is cached locally (e.g. `~/Library/Application Support/cloudslash/billing.json` on macOS), so a paying user keeps access while offline.
-- With no store account configured, **Start 7-day demo trial** unlocks the Pro screens locally so the full workflow can be demonstrated.
+Configuration is documented in `frontend/.env.example`.
 
 ### Cross-platform builds
 
